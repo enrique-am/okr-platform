@@ -4,6 +4,7 @@ import { useState, useTransition } from "react"
 import { useRouter } from "next/navigation"
 import { updateObjective } from "./actions"
 import type { EditKRInput } from "./actions"
+import { AiSuggestButton } from "@/components/ai/suggest-button"
 
 // Local mirrors of the Prisma enums (client components cannot import @prisma/client)
 const KeyResultType = {
@@ -143,6 +144,8 @@ export function EditObjectiveForm({
   )
   const [error, setError] = useState<string | null>(null)
 
+  const teamName = teams.find((t) => t.id === teamId)?.name ?? ""
+
   // ── KR helpers ──────────────────────────────────────────────────────────────
 
   function updateKR(localId: string, patch: Partial<KRState>) {
@@ -214,6 +217,12 @@ export function EditObjectiveForm({
             placeholder="p.ej. Aumentar audiencia digital en 40%"
             className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent"
             required
+          />
+          <AiSuggestButton
+            text={title}
+            type="objective"
+            teamName={teamName}
+            onAccept={setTitle}
           />
         </div>
 
@@ -312,6 +321,7 @@ export function EditObjectiveForm({
             index={idx}
             objectiveNumber={objectiveNumber}
             kr={kr}
+            teamName={teamName}
             canRemove={krs.length > 1}
             onChange={(patch) => updateKR(kr._id, patch)}
             onRemove={() => removeKR(kr._id)}
@@ -354,12 +364,13 @@ interface KRCardProps {
   index: number
   objectiveNumber: number | null
   kr: KRState
+  teamName: string
   canRemove: boolean
   onChange: (patch: Partial<KRState>) => void
   onRemove: () => void
 }
 
-function KRCard({ index, objectiveNumber, kr, canRemove, onChange, onRemove }: KRCardProps) {
+function KRCard({ index, objectiveNumber, kr, teamName, canRemove, onChange, onRemove }: KRCardProps) {
   const krLabel =
     objectiveNumber != null
       ? `KR ${objectiveNumber}.${index + 1}`
@@ -396,6 +407,12 @@ function KRCard({ index, objectiveNumber, kr, canRemove, onChange, onRemove }: K
           placeholder="p.ej. Visitantes únicos mensuales: 2.5M"
           className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent"
           required
+        />
+        <AiSuggestButton
+          text={kr.title}
+          type="key_result"
+          teamName={teamName}
+          onAccept={(s) => onChange({ title: s })}
         />
       </div>
 

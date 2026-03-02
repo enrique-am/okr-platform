@@ -4,6 +4,7 @@ import { useState, useTransition } from "react"
 import { useRouter } from "next/navigation"
 import { createObjective } from "./actions"
 import type { KRInput } from "./actions"
+import { AiSuggestButton } from "@/components/ai/suggest-button"
 
 // Local mirrors of the Prisma enums — @prisma/client is server-only and cannot
 // be imported from client components (it's in serverComponentsExternalPackages).
@@ -80,6 +81,8 @@ export function ObjectiveForm({ teams }: { teams: Team[] }) {
   const [krs, setKRs]         = useState<KRState[]>([EMPTY_KR()])
   const [error, setError]     = useState<string | null>(null)
 
+  const teamName = teams.find((t) => t.id === teamId)?.name ?? ""
+
   // ── KR helpers ──────────────────────────────────────────────────────────────
 
   function updateKR(id: string, patch: Partial<KRState>) {
@@ -150,6 +153,12 @@ export function ObjectiveForm({ teams }: { teams: Team[] }) {
             className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent"
             required
           />
+          <AiSuggestButton
+            text={title}
+            type="objective"
+            teamName={teamName}
+            onAccept={setTitle}
+          />
         </div>
 
         {/* Team + Quarter + Year */}
@@ -219,6 +228,7 @@ export function ObjectiveForm({ teams }: { teams: Team[] }) {
             key={kr._id}
             index={idx}
             kr={kr}
+            teamName={teamName}
             canRemove={krs.length > 1}
             onChange={(patch) => updateKR(kr._id, patch)}
             onRemove={() => removeKR(kr._id)}
@@ -260,12 +270,13 @@ export function ObjectiveForm({ teams }: { teams: Team[] }) {
 interface KRCardProps {
   index: number
   kr: KRState
+  teamName: string
   canRemove: boolean
   onChange: (patch: Partial<KRState>) => void
   onRemove: () => void
 }
 
-function KRCard({ index, kr, canRemove, onChange, onRemove }: KRCardProps) {
+function KRCard({ index, kr, teamName, canRemove, onChange, onRemove }: KRCardProps) {
   const isBoolean = kr.type === KeyResultType.BOOLEAN
 
   return (
@@ -298,6 +309,12 @@ function KRCard({ index, kr, canRemove, onChange, onRemove }: KRCardProps) {
           placeholder="p.ej. Visitantes únicos mensuales: 2.5M"
           className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent"
           required
+        />
+        <AiSuggestButton
+          text={kr.title}
+          type="key_result"
+          teamName={teamName}
+          onAccept={(s) => onChange({ title: s })}
         />
       </div>
 
