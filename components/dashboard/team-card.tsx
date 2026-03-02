@@ -1,3 +1,4 @@
+import Link from "next/link"
 import type { TeamData, Objective, OKRStatus } from "@/lib/mock-data"
 
 // ─── Status config ────────────────────────────────────────────────────────────
@@ -61,7 +62,13 @@ export function TeamCard({ team }: TeamCardProps) {
       {/* Objectives */}
       <div className="flex-1 px-5 py-4 space-y-5">
         {team.objectives.map((obj) => (
-          <ObjectiveRow key={obj.id} objective={obj} />
+          <Link
+            key={obj.id}
+            href={`/dashboard/${obj.id}/edit`}
+            className="block rounded-xl hover:bg-gray-50 -mx-2 px-2 py-1 -my-1 transition-colors"
+          >
+            <ObjectiveRow objective={obj} />
+          </Link>
         ))}
       </div>
 
