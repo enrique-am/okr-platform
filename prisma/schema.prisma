@@ -1,0 +1,158 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── Enums ────────────────────────────────────────────────────────────────────
+
+enum Role {
+  EXECUTIVE
+  LEAD
+  MEMBER
+  ADMIN
+}
+
+enum ObjectiveStatus {
+  DRAFT
+  ACTIVE
+  COMPLETED
+  CANCELLED
+}
+
+enum KeyResultType {
+  PERCENTAGE
+  NUMBER
+  CURRENCY
+  BOOLEAN
+}
+
+// ─── Core Domain Models ───────────────────────────────────────────────────────
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String    @unique
+  emailVerified DateTime?
+  image         String?
+  role          Role      @default(MEMBER)
+
+  teamId String?
+  team   Team?   @relation(fields: [teamId], references: [id])
+
+  ownedObjectives Objective[] @relation("ObjectiveOwner")
+  checkIns        CheckIn[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // NextAuth adapter fields
+  accounts Account[]
+  sessions Session[]
+}
+
+model Team {
+  id          String  @id @default(cuid())
+  name        String
+  description String?
+  slug        String  @unique
+
+  members    User[]
+  objectives Objective[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Objective {
+  id          String          @id @default(cuid())
+  title       String
+  description String?
+  status      ObjectiveStatus @default(DRAFT)
+  startDate   DateTime
+  endDate     DateTime
+
+  ownerId String
+  owner   User   @relation("ObjectiveOwner", fields: [ownerId], references: [id])
+
+  teamId String?
+  team   Team?   @relation(fields: [teamId], references: [id])
+
+  keyResults KeyResult[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model KeyResult {
+  id           String        @id @default(cuid())
+  title        String
+  description  String?
+  type         KeyResultType @default(PERCENTAGE)
+  targetValue  Float
+  currentValue Float         @default(0)
+  unit         String?
+
+  objectiveId String
+  objective   Objective @relation(fields: [objectiveId], references: [id], onDelete: Cascade)
+
+  checkIns CheckIn[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model CheckIn {
+  id    String  @id @default(cuid())
+  value Float
+  note  String?
+
+  keyResultId String
+  keyResult   KeyResult @relation(fields: [keyResultId], references: [id], onDelete: Cascade)
+
+  authorId String
+  author   User   @relation(fields: [authorId], references: [id])
+
+  createdAt DateTime @default(now())
+}
+
+// ─── NextAuth Required Models ─────────────────────────────────────────────────
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
