@@ -4,17 +4,28 @@ import { revalidatePath } from "next/cache"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
-import { Role } from "@prisma/client"
+import { Role, UserStatus } from "@prisma/client"
+import { logActivity } from "@/lib/activity-log"
+import { sendInviteEmail } from "@/lib/email"
+
+type Result = { success: true } | { success: false; error: string }
 
 async function assertAdmin() {
   const session = await getServerSession(authOptions)
   if (session?.user?.role !== "ADMIN") throw new Error("No autorizado")
+  return session
 }
 
-export async function updateUserRole(
-  userId: string,
-  role: string
-): Promise<{ success: true } | { success: false; error: string }> {
+const ROLE_LABELS: Record<string, string> = {
+  EXECUTIVE: "Ejecutivo",
+  LEAD: "Líder",
+  MEMBER: "Miembro",
+  ADMIN: "Admin",
+}
+
+// ─── Existing actions ──────────────────────────────────────────────────────────
+
+export async function updateUserRole(userId: string, role: string): Promise<Result> {
   try {
     await assertAdmin()
     await prisma.user.update({
@@ -28,16 +39,191 @@ export async function updateUserRole(
   }
 }
 
-export async function updateUserTeam(
-  userId: string,
-  teamId: string | null
-): Promise<{ success: true } | { success: false; error: string }> {
+export async function updateUserTeam(userId: string, teamId: string | null): Promise<Result> {
   try {
     await assertAdmin()
     await prisma.user.update({
       where: { id: userId },
       data: { teamId: teamId || null },
     })
+    revalidatePath("/admin/users")
+    return { success: true }
+  } catch (e) {
+    return { success: false, error: e instanceof Error ? e.message : "Error desconocido" }
+  }
+}
+
+// ─── Invite user ───────────────────────────────────────────────────────────────
+
+export async function inviteUser(
+  email: string,
+  role: string,
+  teamId: string
+): Promise<Result> {
+  try {
+    const session = await assertAdmin()
+    const normalizedEmail = email.trim().toLowerCase()
+
+    if (!normalizedEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
+      return { success: false, error: "Email inválido" }
+    }
+
+    const existing = await prisma.user.findUnique({ where: { email: normalizedEmail } })
+    if (existing) {
+      return { success: false, error: "Ya existe un usuario con ese email" }
+    }
+
+    const team = await prisma.team.findUnique({ where: { id: teamId }, select: { name: true } })
+    if (!team) return { success: false, error: "Equipo no encontrado" }
+
+    const inviteToken = crypto.randomUUID()
+
+    const user = await prisma.user.create({
+      data: {
+        email: normalizedEmail,
+        role: role as Role,
+        teamId,
+        status: UserStatus.PENDING,
+        inviteToken,
+      },
+    })
+
+    try {
+      await sendInviteEmail(normalizedEmail, {
+        roleName: ROLE_LABELS[role] || role,
+        teamName: team.name,
+      })
+    } catch {
+      // Email send failure is non-fatal — user is still created
+      console.error("Failed to send invite email to", normalizedEmail)
+    }
+
+    await logActivity(session.user.id, "INVITE_USER", {
+      invitedUserId: user.id,
+      email: normalizedEmail,
+      role,
+      teamId,
+    })
+
+    revalidatePath("/admin/users")
+    return { success: true }
+  } catch (e) {
+    return { success: false, error: e instanceof Error ? e.message : "Error desconocido" }
+  }
+}
+
+// ─── Bulk invite ───────────────────────────────────────────────────────────────
+
+export interface BulkInviteRow {
+  email: string
+  role: string
+  teamId: string
+  teamName: string
+}
+
+export async function bulkInviteUsers(
+  rows: BulkInviteRow[]
+): Promise<{ success: true; created: number; skipped: number } | { success: false; error: string }> {
+  try {
+    const session = await assertAdmin()
+    let created = 0
+    let skipped = 0
+
+    for (const row of rows) {
+      try {
+        const normalizedEmail = row.email.trim().toLowerCase()
+        const existing = await prisma.user.findUnique({ where: { email: normalizedEmail } })
+        if (existing) {
+          skipped++
+          continue
+        }
+
+        const inviteToken = crypto.randomUUID()
+        await prisma.user.create({
+          data: {
+            email: normalizedEmail,
+            role: row.role as Role,
+            teamId: row.teamId,
+            status: UserStatus.PENDING,
+            inviteToken,
+          },
+        })
+
+        try {
+          await sendInviteEmail(normalizedEmail, {
+            roleName: ROLE_LABELS[row.role] || row.role,
+            teamName: row.teamName,
+          })
+        } catch {
+          console.error("Failed to send invite email to", normalizedEmail)
+        }
+
+        created++
+      } catch {
+        skipped++
+      }
+    }
+
+    await logActivity(session.user.id, "BULK_INVITE", { created, skipped })
+    revalidatePath("/admin/users")
+    return { success: true, created, skipped }
+  } catch (e) {
+    return { success: false, error: e instanceof Error ? e.message : "Error desconocido" }
+  }
+}
+
+// ─── Deactivate user ───────────────────────────────────────────────────────────
+
+export async function deactivateUser(userId: string): Promise<Result> {
+  try {
+    const session = await assertAdmin()
+    await prisma.user.update({
+      where: { id: userId },
+      data: { status: UserStatus.INACTIVE },
+    })
+    await logActivity(session.user.id, "DEACTIVATE_USER", { targetUserId: userId })
+    revalidatePath("/admin/users")
+    return { success: true }
+  } catch (e) {
+    return { success: false, error: e instanceof Error ? e.message : "Error desconocido" }
+  }
+}
+
+// ─── Reactivate user ───────────────────────────────────────────────────────────
+
+export async function reactivateUser(userId: string): Promise<Result> {
+  try {
+    const session = await assertAdmin()
+    await prisma.user.update({
+      where: { id: userId },
+      data: { status: UserStatus.ACTIVE },
+    })
+    await logActivity(session.user.id, "REACTIVATE_USER", { targetUserId: userId })
+    revalidatePath("/admin/users")
+    return { success: true }
+  } catch (e) {
+    return { success: false, error: e instanceof Error ? e.message : "Error desconocido" }
+  }
+}
+
+// ─── Delete user ───────────────────────────────────────────────────────────────
+
+export async function deleteUser(userId: string): Promise<Result> {
+  try {
+    const session = await assertAdmin()
+    const user = await prisma.user.findUnique({ where: { id: userId }, select: { status: true, email: true } })
+    if (!user) return { success: false, error: "Usuario no encontrado" }
+    if (user.status !== UserStatus.INACTIVE) {
+      return { success: false, error: "Solo se pueden eliminar usuarios inactivos" }
+    }
+
+    // Log before delete (cascade will delete user's logs)
+    await logActivity(session.user.id, "DELETE_USER", {
+      deletedUserId: userId,
+      deletedEmail: user.email,
+    })
+
+    await prisma.user.delete({ where: { id: userId } })
     revalidatePath("/admin/users")
     return { success: true }
   } catch (e) {

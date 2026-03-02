@@ -1,15 +1,14 @@
 import { getServerSession } from "next-auth"
 import { redirect, notFound } from "next/navigation"
-import Link from "next/link"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
-import { NavBar } from "@/components/dashboard/nav-bar"
+import { AppLayout } from "@/components/layout/app-layout"
 import { EditObjectiveForm } from "./edit-objective-form"
 
 export const metadata = { title: "Editar objetivo – OKR Platform" }
 
 function dateToQuarter(date: Date): { quarter: 1 | 2 | 3 | 4; year: number } {
-  const month = date.getMonth() // 0-indexed
+  const month = date.getMonth()
   const quarter = (Math.floor(month / 3) + 1) as 1 | 2 | 3 | 4
   return { quarter, year: date.getFullYear() }
 }
@@ -25,7 +24,10 @@ export default async function EditObjectivePage({
   const [objective, teams] = await Promise.all([
     prisma.objective.findUnique({
       where: { id: params.id },
-      include: { keyResults: { orderBy: { createdAt: "asc" } } },
+      include: {
+        keyResults: { orderBy: { createdAt: "asc" } },
+        team: { select: { name: true, slug: true } },
+      },
     }),
     prisma.team.findMany({
       select: { id: true, name: true },
@@ -35,7 +37,6 @@ export default async function EditObjectivePage({
 
   if (!objective) notFound()
 
-  // Derive this objective's 1-based position within its team (creation order)
   const objectiveNumber = objective.teamId
     ? await (async () => {
         const siblings = await prisma.objective.findMany({
@@ -68,41 +69,35 @@ export default async function EditObjectivePage({
     })),
   }
 
-  const okrLabel = objectiveNumber != null ? `OKR ${objectiveNumber}` : "Objetivo"
+  const okrLabel = objectiveNumber != null ? `ORC ${objectiveNumber}` : "ORC"
+
+  const breadcrumbs = [
+    { label: "Dashboard", href: "/dashboard" },
+    ...(objective.team
+      ? [{ label: objective.team.name, href: `/dashboard/teams/${objective.team.slug}` }]
+      : []),
+    { label: `Editar ${okrLabel}` },
+  ]
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <NavBar user={session.user} />
-
-      <main className="max-w-3xl mx-auto px-4 sm:px-6 py-8">
-        {/* Breadcrumb */}
-        <div className="flex items-center gap-2 text-sm text-gray-400 mb-6 min-w-0">
-          <Link href="/dashboard" className="hover:text-gray-600 flex-shrink-0">
-            Dashboard
-          </Link>
-          <span>/</span>
-          <span className="text-gray-700 font-medium truncate">{objective.title}</span>
+    <AppLayout breadcrumbs={breadcrumbs} maxWidth="max-w-3xl">
+      <div className="mb-6">
+        <div className="flex items-center gap-2 mb-1">
+          <span className="inline-flex items-center px-2.5 py-0.5 rounded-lg text-xs font-bold bg-gray-100 text-gray-500">
+            {okrLabel}
+          </span>
+          <h1 className="text-xl font-semibold text-gray-900">Editar objetivo</h1>
         </div>
-
-        <div className="mb-6">
-          <div className="flex items-center gap-2 mb-1">
-            <span className="inline-flex items-center px-2.5 py-0.5 rounded-lg text-xs font-bold bg-gray-100 text-gray-500">
-              {okrLabel}
-            </span>
-            <h1 className="text-xl font-semibold text-gray-900">Editar objetivo</h1>
-          </div>
-          <p className="text-sm text-gray-400">
-            Actualiza el objetivo, sus resultados clave y valores actuales.
-          </p>
-        </div>
-
-        <EditObjectiveForm
-          objectiveId={params.id}
-          objectiveNumber={objectiveNumber}
-          teams={teams}
-          initialData={initialData}
-        />
-      </main>
-    </div>
+        <p className="text-sm text-gray-400">
+          Actualiza el objetivo, sus resultados clave y valores actuales.
+        </p>
+      </div>
+      <EditObjectiveForm
+        objectiveId={params.id}
+        objectiveNumber={objectiveNumber}
+        teams={teams}
+        initialData={initialData}
+      />
+    </AppLayout>
   )
 }

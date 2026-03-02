@@ -27,14 +27,14 @@ export function NavBar({ user }: NavBarProps) {
 
         {/* Left: wordmark + quarter badge */}
         <div className="flex items-center gap-3 min-w-0">
-          <div className="flex items-center gap-2.5 flex-shrink-0">
+          <Link href="/dashboard" className="flex items-center gap-2.5 flex-shrink-0 hover:opacity-80 transition-opacity">
             <div className="w-7 h-7 rounded-md bg-brand-500 flex items-center justify-center">
               <span className="text-white font-bold text-xs leading-none">G</span>
             </div>
             <span className="text-sm font-semibold text-gray-900 tracking-tight">
               OKR Platform
             </span>
-          </div>
+          </Link>
           <span className="hidden sm:inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-500 select-none">
             Q1 · 2026
           </span>

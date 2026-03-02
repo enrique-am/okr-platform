@@ -2,7 +2,8 @@
 
 import { useState, useTransition } from "react"
 import { useRouter } from "next/navigation"
-import { createTeam, updateTeamName } from "./actions"
+import { createTeam, updateTeamName, deleteTeam } from "./actions"
+import { Modal } from "@/components/ui/modal"
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -28,6 +29,24 @@ export function TeamsTable({ teams }: { teams: TeamRow[] }) {
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editName, setEditName] = useState("")
   const [editError, setEditError] = useState<string | null>(null)
+
+  // Delete state
+  const [deleteTarget, setDeleteTarget] = useState<TeamRow | null>(null)
+  const [deleteError, setDeleteError] = useState<string | null>(null)
+
+  function handleDelete() {
+    if (!deleteTarget) return
+    setDeleteError(null)
+    startTransition(async () => {
+      const result = await deleteTeam(deleteTarget.id)
+      if (result.success) {
+        setDeleteTarget(null)
+        router.refresh()
+      } else {
+        setDeleteError(result.error)
+      }
+    })
+  }
 
   function handleCreate() {
     if (!newName.trim() || isPending) return
@@ -195,12 +214,20 @@ export function TeamsTable({ teams }: { teams: TeamRow[] }) {
                   {/* Actions */}
                   <td className="px-4 py-3 text-right">
                     {editingId !== team.id && (
-                      <button
-                        onClick={() => startEdit(team)}
-                        className="text-xs font-medium text-gray-400 hover:text-brand-600 transition-colors px-2.5 py-1 rounded-lg hover:bg-gray-100"
-                      >
-                        Editar
-                      </button>
+                      <div className="flex items-center justify-end gap-2">
+                        <button
+                          onClick={() => startEdit(team)}
+                          className="text-xs font-medium text-gray-400 hover:text-brand-600 transition-colors px-2.5 py-1 rounded-lg hover:bg-gray-100"
+                        >
+                          Editar
+                        </button>
+                        <button
+                          onClick={() => { setDeleteTarget(team); setDeleteError(null) }}
+                          className="text-xs font-medium text-gray-400 hover:text-red-600 transition-colors px-2.5 py-1 rounded-lg hover:bg-red-50"
+                        >
+                          Eliminar
+                        </button>
+                      </div>
                     )}
                   </td>
                 </tr>
@@ -217,6 +244,46 @@ export function TeamsTable({ teams }: { teams: TeamRow[] }) {
           </table>
         </div>
       </div>
+
+      {/* Delete confirmation modal */}
+      <Modal open={!!deleteTarget} onClose={() => setDeleteTarget(null)} title="Eliminar equipo">
+        <div className="space-y-4">
+          <p className="text-sm text-gray-600">
+            Al eliminar este equipo:
+          </p>
+          <ul className="text-sm text-gray-600 space-y-1 list-disc list-inside">
+            <li>Todos sus miembros quedarán sin equipo asignado.</li>
+            <li>Sus ORCs serán archivados (cancelados), no eliminados. Los datos se conservan.</li>
+          </ul>
+          {deleteTarget && (
+            <div className="bg-gray-50 rounded-lg px-4 py-3">
+              <p className="text-sm font-medium text-gray-900">{deleteTarget.name}</p>
+              <p className="text-xs text-gray-500">
+                {deleteTarget.members} {deleteTarget.members === 1 ? "miembro" : "miembros"} · {deleteTarget.activeORCs} ORCs activos
+              </p>
+            </div>
+          )}
+          {deleteError && (
+            <p className="text-sm text-red-600">{deleteError}</p>
+          )}
+          <div className="flex gap-3">
+            <button
+              onClick={() => setDeleteTarget(null)}
+              disabled={isPending}
+              className="flex-1 border border-gray-200 text-gray-700 font-medium text-sm py-2.5 rounded-lg hover:bg-gray-50 transition-colors"
+            >
+              Cancelar
+            </button>
+            <button
+              onClick={handleDelete}
+              disabled={isPending}
+              className="flex-1 bg-red-600 hover:bg-red-700 text-white font-medium text-sm py-2.5 rounded-lg transition-colors disabled:opacity-60"
+            >
+              {isPending ? "Eliminando..." : "Eliminar equipo"}
+            </button>
+          </div>
+        </div>
+      </Modal>
     </div>
   )
 }

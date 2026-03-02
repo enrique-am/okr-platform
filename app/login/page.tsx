@@ -7,9 +7,15 @@ export const metadata = {
   title: "Iniciar sesión – OKR Platform",
 }
 
-export default async function LoginPage() {
+export default async function LoginPage({
+  searchParams,
+}: {
+  searchParams: { error?: string }
+}) {
   const session = await getServerSession(authOptions)
   if (session) redirect("/dashboard")
+
+  const isDeactivated = searchParams.error === "account_deactivated"
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center px-4">
@@ -29,6 +35,15 @@ export default async function LoginPage() {
             OKR Platform
           </span>
         </div>
+
+        {/* Deactivation banner */}
+        {isDeactivated && (
+          <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 mb-4">
+            <p className="text-sm text-red-700">
+              Tu cuenta ha sido desactivada. Contacta a tu administrador para más información.
+            </p>
+          </div>
+        )}
 
         {/* Card */}
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm px-8 py-10">

@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { ObjectiveStatus, TrackingStatus, KeyResultType } from "@prisma/client"
+import { logActivity } from "@/lib/activity-log"
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -91,6 +92,12 @@ export async function createObjective(
           })),
         },
       },
+    })
+
+    await logActivity(session.user.id, "CREATE_OBJECTIVE", {
+      objectiveId: objective.id,
+      title: input.title.trim(),
+      teamId: input.teamId,
     })
 
     revalidatePath("/dashboard")

@@ -36,21 +36,31 @@ enum TrackingStatus {
   OFF_TRACK
 }
 
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+  PENDING
+}
+
 // ─── Core Domain Models ───────────────────────────────────────────────────────
 
 model User {
-  id            String    @id @default(cuid())
+  id            String     @id @default(cuid())
   name          String?
-  email         String    @unique
+  email         String     @unique
   emailVerified DateTime?
   image         String?
-  role          Role      @default(MEMBER)
+  role          Role       @default(MEMBER)
+  status        UserStatus @default(ACTIVE)
+  lastLoginAt   DateTime?
+  inviteToken   String?
 
   teamId String?
   team   Team?   @relation(fields: [teamId], references: [id])
 
   ownedObjectives Objective[] @relation("ObjectiveOwner")
   checkIns        CheckIn[]
+  activityLogs    ActivityLog[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -82,8 +92,8 @@ model Objective {
   startDate       DateTime
   endDate         DateTime
 
-  ownerId String
-  owner   User   @relation("ObjectiveOwner", fields: [ownerId], references: [id])
+  ownerId String?
+  owner   User?   @relation("ObjectiveOwner", fields: [ownerId], references: [id], onDelete: SetNull)
 
   teamId String?
   team   Team?   @relation(fields: [teamId], references: [id])
@@ -121,10 +131,25 @@ model CheckIn {
   keyResultId String
   keyResult   KeyResult @relation(fields: [keyResultId], references: [id], onDelete: Cascade)
 
-  authorId String
-  author   User   @relation(fields: [authorId], references: [id])
+  authorId String?
+  author   User?   @relation(fields: [authorId], references: [id], onDelete: SetNull)
 
   createdAt DateTime @default(now())
+}
+
+model ActivityLog {
+  id        String   @id @default(cuid())
+  action    String
+  metadata  Json     @default("{}")
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([action])
+  @@index([createdAt])
 }
 
 // ─── NextAuth Required Models ─────────────────────────────────────────────────
