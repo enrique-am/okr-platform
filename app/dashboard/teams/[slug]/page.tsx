@@ -6,6 +6,7 @@ import { prisma } from "@/lib/prisma"
 import { Role, TrackingStatus, KeyResultType } from "@prisma/client"
 import { AppLayout } from "@/components/layout/app-layout"
 import type { Metadata } from "next"
+import { canEditObjective, canSubmitCheckin } from "@/lib/permissions"
 
 // ─── Metadata ─────────────────────────────────────────────────────────────────
 
@@ -128,6 +129,14 @@ export default async function TeamPage({ params }: { params: { slug: string } })
 
   const lead = team.members[0]?.name ?? "Sin líder asignado"
 
+  const userCtx = {
+    id: session.user.id,
+    role: session.user.role,
+    teamId: session.user.teamId,
+  }
+  const userCanEdit = canEditObjective(userCtx, team.id)
+  const userCanCheckin = canSubmitCheckin(userCtx, team.id)
+
   return (
     <AppLayout
       breadcrumbs={[
@@ -149,24 +158,26 @@ export default async function TeamPage({ params }: { params: { slug: string } })
               {team.objectives.length}{" "}
               {team.objectives.length === 1 ? "objetivo activo" : "objetivos activos"}
             </span>
-            <Link
-              href={`/dashboard/teams/${team.slug}/checkin`}
-              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold text-white bg-brand-500 hover:bg-brand-600 transition-colors"
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                viewBox="0 0 20 20"
-                fill="currentColor"
-                className="w-4 h-4"
+            {userCanCheckin && (
+              <Link
+                href={`/dashboard/teams/${team.slug}/checkin`}
+                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold text-white bg-brand-500 hover:bg-brand-600 transition-colors"
               >
-                <path
-                  fillRule="evenodd"
-                  d="M10 18a8 8 0 100-16 8 8 0 000 16zm.75-11.25a.75.75 0 00-1.5 0v2.5h-2.5a.75.75 0 000 1.5h2.5v2.5a.75.75 0 001.5 0v-2.5h2.5a.75.75 0 000-1.5h-2.5v-2.5z"
-                  clipRule="evenodd"
-                />
-              </svg>
-              Registrar avance
-            </Link>
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 20 20"
+                  fill="currentColor"
+                  className="w-4 h-4"
+                >
+                  <path
+                    fillRule="evenodd"
+                    d="M10 18a8 8 0 100-16 8 8 0 000 16zm.75-11.25a.75.75 0 00-1.5 0v2.5h-2.5a.75.75 0 000 1.5h2.5v2.5a.75.75 0 001.5 0v-2.5h2.5a.75.75 0 000-1.5h-2.5v-2.5z"
+                    clipRule="evenodd"
+                  />
+                </svg>
+                Registrar avance
+              </Link>
+            )}
           </div>
         </div>
       </div>
@@ -219,20 +230,22 @@ export default async function TeamPage({ params }: { params: { slug: string } })
                         <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${tsCfg.dot}`} />
                         {tsCfg.label}
                       </span>
-                      <Link
-                        href={`/dashboard/${obj.id}/edit`}
-                        className="flex items-center gap-1 text-xs text-gray-400 hover:text-brand-600 transition-colors px-2 py-1 rounded-lg hover:bg-gray-50 border border-transparent hover:border-gray-200"
-                      >
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          viewBox="0 0 20 20"
-                          fill="currentColor"
-                          className="w-3 h-3"
+                      {userCanEdit && (
+                        <Link
+                          href={`/dashboard/${obj.id}/edit`}
+                          className="flex items-center gap-1 text-xs text-gray-400 hover:text-brand-600 transition-colors px-2 py-1 rounded-lg hover:bg-gray-50 border border-transparent hover:border-gray-200"
                         >
-                          <path d="M2.695 14.763l-1.262 3.154a.5.5 0 00.65.65l3.155-1.262a4 4 0 001.343-.885L17.5 5.5a2.121 2.121 0 00-3-3L3.58 13.42a4 4 0 00-.885 1.343z" />
-                        </svg>
-                        Editar
-                      </Link>
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            viewBox="0 0 20 20"
+                            fill="currentColor"
+                            className="w-3 h-3"
+                          >
+                            <path d="M2.695 14.763l-1.262 3.154a.5.5 0 00.65.65l3.155-1.262a4 4 0 001.343-.885L17.5 5.5a2.121 2.121 0 00-3-3L3.58 13.42a4 4 0 00-.885 1.343z" />
+                          </svg>
+                          Editar
+                        </Link>
+                      )}
                     </div>
                   </div>
 

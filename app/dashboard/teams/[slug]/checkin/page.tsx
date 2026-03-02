@@ -3,6 +3,7 @@ import { redirect, notFound } from "next/navigation"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { AppLayout } from "@/components/layout/app-layout"
+import { canSubmitCheckin } from "@/lib/permissions"
 import { CheckInForm } from "./checkin-form"
 import type { ObjectiveGroup } from "./checkin-form"
 import Link from "next/link"
@@ -50,6 +51,16 @@ export default async function CheckInPage({ params }: { params: { slug: string }
   })
 
   if (!team) notFound()
+
+  // Guard: only ADMIN or the team's own members/leads may access check-in
+  if (
+    !canSubmitCheckin(
+      { id: session.user.id, role: session.user.role, teamId: session.user.teamId },
+      team.id
+    )
+  ) {
+    redirect(`/dashboard/teams/${team.slug}`)
+  }
 
   const groups: ObjectiveGroup[] = team.objectives.map((obj, objIdx) => ({
     objectiveNumber: objIdx + 1,

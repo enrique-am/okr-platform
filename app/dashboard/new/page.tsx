@@ -4,12 +4,18 @@ import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { AppLayout } from "@/components/layout/app-layout"
 import { ObjectiveForm } from "./objective-form"
+import { canCreateObjective } from "@/lib/permissions"
 
 export const metadata = { title: "Nuevo objetivo – OKR Platform" }
 
 export default async function NewObjectivePage() {
   const session = await getServerSession(authOptions)
   if (!session) redirect("/login")
+
+  // Guard: only ADMIN and LEAD can access the create form
+  if (!canCreateObjective({ id: session.user.id, role: session.user.role, teamId: session.user.teamId })) {
+    redirect("/dashboard")
+  }
 
   const teams = await prisma.team.findMany({
     select: { id: true, name: true },

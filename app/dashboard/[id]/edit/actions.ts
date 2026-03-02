@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { ObjectiveStatus, TrackingStatus, KeyResultType } from "@prisma/client"
+import { canEditObjective } from "@/lib/permissions"
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -61,6 +62,26 @@ export async function updateObjective(
 ): Promise<UpdateObjectiveResult> {
   const session = await getServerSession(authOptions)
   if (!session?.user?.id) return { success: false, error: "No autenticado" }
+
+  // ─── Permission check ─────────────────────────────────────────────────────
+  // Fetch the objective's team from DB to verify permissions (never trust client input alone)
+  const [objective, dbUser] = await Promise.all([
+    prisma.objective.findUnique({
+      where: { id: input.objectiveId },
+      select: { teamId: true },
+    }),
+    prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: { teamId: true },
+    }),
+  ])
+  if (!canEditObjective({ ...session.user, teamId: dbUser?.teamId }, objective?.teamId)) {
+    return { success: false, error: "Sin permiso para editar este objetivo" }
+  }
+  // LEAD cannot reassign an objective to a different team
+  if (session.user.role === "LEAD" && input.teamId !== dbUser?.teamId) {
+    return { success: false, error: "No puedes reasignar un objetivo a otro equipo" }
+  }
 
   if (!input.title.trim()) return { success: false, error: "El título es requerido" }
   if (!input.teamId) return { success: false, error: "Selecciona un equipo" }

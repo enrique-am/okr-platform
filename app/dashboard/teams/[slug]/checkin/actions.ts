@@ -6,6 +6,7 @@ import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { logActivity } from "@/lib/activity-log"
 import { KeyResultType } from "@prisma/client"
+import { canSubmitCheckin } from "@/lib/permissions"
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -58,6 +59,15 @@ function applyUpdates(
 export async function submitCheckIn(input: SubmitCheckInInput): Promise<SubmitCheckInResult> {
   const session = await getServerSession(authOptions)
   if (!session?.user?.id) return { success: false, error: "No autenticado" }
+
+  // ─── Permission check ─────────────────────────────────────────────────────
+  const [teamForPermission, dbUser] = await Promise.all([
+    prisma.team.findUnique({ where: { slug: input.teamSlug }, select: { id: true } }),
+    prisma.user.findUnique({ where: { id: session.user.id }, select: { teamId: true } }),
+  ])
+  if (!canSubmitCheckin({ ...session.user, teamId: dbUser?.teamId }, teamForPermission?.id)) {
+    return { success: false, error: "Sin permiso para registrar avances en este equipo" }
+  }
 
   const toProcess = input.entries.filter(
     (e) => e.newValue !== e.originalValue || e.notes.trim() !== ""
@@ -132,6 +142,9 @@ export async function submitCheckIn(input: SubmitCheckInInput): Promise<SubmitCh
     await logActivity(session.user.id, "SUBMIT_CHECKIN", {
       teamSlug: input.teamSlug,
       entriesCount: toProcess.length,
+      ...(session.user.impersonatedBy
+        ? { impersonatedBy: session.user.impersonatedBy }
+        : {}),
     })
 
     revalidatePath("/dashboard")

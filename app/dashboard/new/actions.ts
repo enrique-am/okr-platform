@@ -6,6 +6,7 @@ import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { ObjectiveStatus, TrackingStatus, KeyResultType } from "@prisma/client"
 import { logActivity } from "@/lib/activity-log"
+import { canCreateObjective } from "@/lib/permissions"
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -59,6 +60,21 @@ export async function createObjective(
   const session = await getServerSession(authOptions)
   if (!session?.user?.id) return { success: false, error: "No autenticado" }
 
+  // ─── Permission check ─────────────────────────────────────────────────────
+  if (!canCreateObjective(session.user)) {
+    return { success: false, error: "Sin permiso para crear objetivos" }
+  }
+  // LEAD can only create objectives for their own team — verify from DB
+  if (session.user.role === "LEAD") {
+    const dbUser = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: { teamId: true },
+    })
+    if (dbUser?.teamId !== input.teamId) {
+      return { success: false, error: "Solo puedes crear ORCs para tu propio equipo" }
+    }
+  }
+
   // Basic validation
   if (!input.title.trim()) return { success: false, error: "El título es requerido" }
   if (!input.teamId) return { success: false, error: "Selecciona un equipo" }
@@ -98,6 +114,9 @@ export async function createObjective(
       objectiveId: objective.id,
       title: input.title.trim(),
       teamId: input.teamId,
+      ...(session.user.impersonatedBy
+        ? { impersonatedBy: session.user.impersonatedBy }
+        : {}),
     })
 
     revalidatePath("/dashboard")

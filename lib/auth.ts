@@ -54,13 +54,25 @@ export const authOptions: NextAuthOptions = {
       if (user) {
         token.id = user.id
         token.role = (user as { role: Role }).role
+        // Fetch teamId at sign-in and store in token
+        const dbUser = await prisma.user.findUnique({
+          where: { id: user.id },
+          select: { teamId: true },
+        })
+        token.teamId = dbUser?.teamId ?? null
       }
+      // `impersonatedBy` is injected directly into the token by the impersonate
+      // server action — just preserve it on every subsequent call
       return token
     },
     async session({ session, token }) {
       if (session.user) {
         session.user.id = token.id as string
         session.user.role = token.role as Role
+        session.user.teamId = token.teamId
+        if (token.impersonatedBy) {
+          session.user.impersonatedBy = token.impersonatedBy
+        }
       }
       return session
     },

@@ -4,6 +4,7 @@ import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { AppLayout } from "@/components/layout/app-layout"
 import { EditObjectiveForm } from "./edit-objective-form"
+import { canEditObjective } from "@/lib/permissions"
 
 export const metadata = { title: "Editar objetivo – OKR Platform" }
 
@@ -36,6 +37,16 @@ export default async function EditObjectivePage({
   ])
 
   if (!objective) notFound()
+
+  // Guard: redirect unauthorized users before rendering the form
+  if (
+    !canEditObjective(
+      { id: session.user.id, role: session.user.role, teamId: session.user.teamId },
+      objective.teamId
+    )
+  ) {
+    redirect("/dashboard")
+  }
 
   const objectiveNumber = objective.teamId
     ? await (async () => {

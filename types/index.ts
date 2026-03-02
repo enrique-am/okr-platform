@@ -14,6 +14,8 @@ declare module "next-auth" {
       email?: string | null
       image?: string | null
       role: Role
+      teamId?: string | null
+      impersonatedBy?: { id: string; name: string }
     }
   }
 
@@ -26,5 +28,7 @@ declare module "next-auth/jwt" {
   interface JWT {
     id: string
     role: Role
+    teamId?: string | null
+    impersonatedBy?: { id: string; name: string }
   }
 }

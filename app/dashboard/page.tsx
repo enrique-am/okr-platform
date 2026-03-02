@@ -8,6 +8,7 @@ import { AppLayout } from "@/components/layout/app-layout"
 import { CompanySummary } from "@/components/dashboard/company-summary"
 import { TeamCard } from "@/components/dashboard/team-card"
 import type { TeamData, OKRStatus } from "@/lib/mock-data"
+import { canCreateObjective, canEditObjective, canSubmitCheckin } from "@/lib/permissions"
 
 export const metadata = { title: "Dashboard – OKR Platform" }
 
@@ -89,6 +90,12 @@ export default async function DashboardPage() {
       }),
     }))
 
+  const userCtx = {
+    id: session.user.id,
+    role: session.user.role,
+    teamId: session.user.teamId,
+  }
+
   return (
     <AppLayout>
       <div className="mb-6 flex items-start justify-between gap-4">
@@ -98,12 +105,14 @@ export default async function DashboardPage() {
             Progreso de ORCs por equipo · Q1 2026
           </p>
         </div>
-        <Link
-          href="/dashboard/new"
-          className="flex-shrink-0 inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-brand-500 hover:bg-brand-600 text-white text-sm font-semibold transition-colors"
-        >
-          <span className="text-base leading-none">+</span> Nuevo objetivo
-        </Link>
+        {canCreateObjective(userCtx) && (
+          <Link
+            href="/dashboard/new"
+            className="flex-shrink-0 inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-brand-500 hover:bg-brand-600 text-white text-sm font-semibold transition-colors"
+          >
+            <span className="text-base leading-none">+</span> Nuevo objetivo
+          </Link>
+        )}
       </div>
 
       <div className="mb-8">
@@ -116,7 +125,12 @@ export default async function DashboardPage() {
         </h2>
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
           {teams.map((team) => (
-            <TeamCard key={team.id} team={team} />
+            <TeamCard
+              key={team.id}
+              team={team}
+              canEdit={canEditObjective(userCtx, team.id)}
+              canCheckin={canSubmitCheckin(userCtx, team.id)}
+            />
           ))}
         </div>
       </div>
