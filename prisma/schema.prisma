@@ -30,6 +30,12 @@ enum KeyResultType {
   BOOLEAN
 }
 
+enum TrackingStatus {
+  ON_TRACK
+  AT_RISK
+  OFF_TRACK
+}
+
 // ─── Core Domain Models ───────────────────────────────────────────────────────
 
 model User {
@@ -71,9 +77,10 @@ model Objective {
   id          String          @id @default(cuid())
   title       String
   description String?
-  status      ObjectiveStatus @default(DRAFT)
-  startDate   DateTime
-  endDate     DateTime
+  status          ObjectiveStatus @default(DRAFT)
+  trackingStatus  TrackingStatus  @default(ON_TRACK)
+  startDate       DateTime
+  endDate         DateTime
 
   ownerId String
   owner   User   @relation("ObjectiveOwner", fields: [ownerId], references: [id])

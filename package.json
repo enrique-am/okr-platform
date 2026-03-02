@@ -10,7 +10,8 @@
     "db:generate": "dotenv -e .env.local -- prisma generate",
     "db:push": "dotenv -e .env.local -- prisma db push",
     "db:migrate": "dotenv -e .env.local -- prisma migrate dev",
-    "db:studio": "dotenv -e .env.local -- prisma studio"
+    "db:studio": "dotenv -e .env.local -- prisma studio",
+    "db:seed": "dotenv -e .env.local -- prisma db seed"
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.7.4",
@@ -20,6 +21,9 @@
     "openai": "^4.104.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"
+  },
+  "prisma": {
+    "seed": "dotenv -e .env.local -- tsx prisma/seed.ts"
   },
   "devDependencies": {
     "@types/node": "^20.17.16",
@@ -32,6 +36,7 @@
     "postcss": "^8.5.3",
     "prisma": "^6.4.1",
     "tailwindcss": "^3.4.17",
+    "tsx": "^4.19.2",
     "typescript": "^5.7.3"
   }
 }
