@@ -92,7 +92,7 @@ export default async function CheckInPage({ params }: { params: { slug: string }
 
         {totalKRs === 0 ? (
           <div className="text-center py-16">
-            <p className="text-sm text-gray-400">Este equipo no tiene KRs activos.</p>
+            <p className="text-sm text-gray-400">Este equipo no tiene RCs activos.</p>
             <Link
               href={`/dashboard/teams/${team.slug}`}
               className="mt-4 inline-flex text-sm text-brand-600 hover:text-brand-700 font-medium"

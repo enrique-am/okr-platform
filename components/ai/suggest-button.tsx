@@ -14,6 +14,7 @@ export interface AiSuggestButtonProps {
   text: string
   type: "objective" | "key_result"
   teamName: string
+  parentObjective?: string
   onAccept: (suggestion: string) => void
 }
 
@@ -54,7 +55,7 @@ function Spinner({ className }: { className?: string }) {
 
 // ─── AiSuggestButton ──────────────────────────────────────────────────────────
 
-export function AiSuggestButton({ text, type, teamName, onAccept }: AiSuggestButtonProps) {
+export function AiSuggestButton({ text, type, teamName, parentObjective, onAccept }: AiSuggestButtonProps) {
   const [state, setState] = useState<SuggestState>({ phase: "idle" })
 
   async function fetchSuggestion() {
@@ -64,7 +65,7 @@ export function AiSuggestButton({ text, type, teamName, onAccept }: AiSuggestBut
       const res = await fetch("/api/ai/suggest", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text: text.trim(), type, teamName }),
+        body: JSON.stringify({ text: text.trim(), type, teamName, parentObjective }),
       })
       const data = await res.json()
       if (!res.ok || data.error) {
@@ -100,7 +101,7 @@ export function AiSuggestButton({ text, type, teamName, onAccept }: AiSuggestBut
           ) : (
             <SparklesIcon className="w-3.5 h-3.5" />
           )}
-          {isLoading ? "Generando…" : "Sugerir con IA"}
+          {isLoading ? "Generando…" : "Mejorar con IA"}
         </button>
       </div>
 

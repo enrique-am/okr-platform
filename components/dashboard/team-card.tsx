@@ -192,7 +192,7 @@ function ObjectiveAccordion({
 
         {/* OKR label */}
         <span className="text-xs font-bold text-gray-400 flex-shrink-0 tabular-nums">
-          OKR {objective.number}
+          ORC {objective.number}
         </span>
 
         {/* Title */}
@@ -282,7 +282,7 @@ function KRRow({
       {/* KR number + title */}
       <div className="flex items-baseline gap-1.5 mb-1">
         <span className="text-xs font-bold text-gray-400 flex-shrink-0 tabular-nums">
-          KR {objectiveNumber}.{kr.number}
+          RC {objectiveNumber}.{kr.number}
         </span>
         <span className="text-xs text-gray-700 leading-snug line-clamp-1 min-w-0">
           {kr.title}

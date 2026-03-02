@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation"
 import { updateObjective } from "./actions"
 import type { EditKRInput } from "./actions"
 import { AiSuggestButton } from "@/components/ai/suggest-button"
+import { SuggestKRsButton } from "@/components/ai/suggest-krs-button"
+import type { KRSuggestion } from "@/components/ai/suggest-krs-button"
 
 // Local mirrors of the Prisma enums (client components cannot import @prisma/client)
 const KeyResultType = {
@@ -165,6 +167,23 @@ export function EditObjectiveForm({
     if (krs.length < 5) setKRs((prev) => [...prev, emptyKR()])
   }
 
+  function addKRFromSuggestion(suggestion: KRSuggestion) {
+    if (krs.length >= 5) return
+    setKRs((prev) => [
+      ...prev,
+      {
+        _id: Math.random().toString(36).slice(2),
+        title: suggestion.title,
+        type: suggestion.type as KeyResultType,
+        targetValue: suggestion.type === "BOOLEAN" ? 1 : suggestion.targetValue,
+        currentValue: 0,
+        unit: suggestion.unit,
+        description: "",
+        trackingStatus: TrackingStatus.ON_TRACK,
+      },
+    ])
+  }
+
   function removeKR(localId: string) {
     if (krs.length > 1) setKRs((prev) => prev.filter((kr) => kr._id !== localId))
   }
@@ -315,6 +334,14 @@ export function EditObjectiveForm({
           )}
         </div>
 
+        {krs.length < 5 && (
+          <SuggestKRsButton
+            objectiveTitle={title}
+            teamName={teamName}
+            onAdd={addKRFromSuggestion}
+          />
+        )}
+
         {krs.map((kr, idx) => (
           <KRCard
             key={kr._id}
@@ -322,6 +349,7 @@ export function EditObjectiveForm({
             objectiveNumber={objectiveNumber}
             kr={kr}
             teamName={teamName}
+            parentObjective={title}
             canRemove={krs.length > 1}
             onChange={(patch) => updateKR(kr._id, patch)}
             onRemove={() => removeKR(kr._id)}
@@ -365,16 +393,17 @@ interface KRCardProps {
   objectiveNumber: number | null
   kr: KRState
   teamName: string
+  parentObjective: string
   canRemove: boolean
   onChange: (patch: Partial<KRState>) => void
   onRemove: () => void
 }
 
-function KRCard({ index, objectiveNumber, kr, teamName, canRemove, onChange, onRemove }: KRCardProps) {
+function KRCard({ index, objectiveNumber, kr, teamName, parentObjective, canRemove, onChange, onRemove }: KRCardProps) {
   const krLabel =
     objectiveNumber != null
-      ? `KR ${objectiveNumber}.${index + 1}`
-      : `KR ${index + 1}`
+      ? `RC ${objectiveNumber}.${index + 1}`
+      : `RC ${index + 1}`
   const isBoolean = kr.type === KeyResultType.BOOLEAN
 
   return (
@@ -412,6 +441,7 @@ function KRCard({ index, objectiveNumber, kr, teamName, canRemove, onChange, onR
           text={kr.title}
           type="key_result"
           teamName={teamName}
+          parentObjective={parentObjective}
           onAccept={(s) => onChange({ title: s })}
         />
       </div>

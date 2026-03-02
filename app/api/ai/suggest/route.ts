@@ -7,7 +7,9 @@ const SYSTEM_PROMPT =
   "You are an OKR coach for Grupo AM, a media and news publishing company in León, Guanajuato, Mexico. " +
   "Your job is to rewrite objectives and key results to be clearer, more strategic, and properly formatted " +
   "according to OKR methodology. Objectives should be inspirational and qualitative. Key results should be " +
-  "specific, measurable, time-bound, and outcome-focused. Respond only with the rewritten text, nothing else. " +
+  "specific, measurable, time-bound, and outcome-focused. " +
+  "Never begin your response with words like Objetivo:, Resultado Clave:, RC:, KR:, ORC:, OKR: or any similar label or prefix. " +
+  "Respond only with the rewritten text, nothing else. " +
   "Keep the response in Spanish."
 
 export async function POST(req: NextRequest) {
@@ -16,20 +18,23 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "No autenticado" }, { status: 401 })
   }
 
-  let body: { text?: string; type?: string; teamName?: string }
+  let body: { text?: string; type?: string; teamName?: string; parentObjective?: string }
   try {
     body = await req.json()
   } catch {
     return NextResponse.json({ error: "Cuerpo inválido" }, { status: 400 })
   }
 
-  const { text, type, teamName } = body
+  const { text, type, teamName, parentObjective } = body
   if (!text?.trim() || !type) {
     return NextResponse.json({ error: "Parámetros requeridos" }, { status: 400 })
   }
 
   const typeLabel = type === "objective" ? "objetivo" : "resultado clave"
-  const userPrompt = `Reescribe este ${typeLabel} para el equipo "${teamName ?? ""}": "${text.trim()}"`
+  let userPrompt = `Reescribe este ${typeLabel} para el equipo "${teamName ?? ""}": "${text.trim()}"`
+  if (type === "key_result" && parentObjective?.trim()) {
+    userPrompt += `\n\nEste resultado clave pertenece al siguiente objetivo: "${parentObjective.trim()}". Asegúrate de que sea específico, medible y alineado con ese objetivo.`
+  }
 
   try {
     const completion = await openai.chat.completions.create({

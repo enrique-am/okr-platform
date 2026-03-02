@@ -103,7 +103,7 @@ export default async function DashboardPage() {
           <div>
             <h1 className="text-xl font-semibold text-gray-900">Dashboard</h1>
             <p className="text-sm text-gray-400 mt-0.5">
-              Progreso de OKRs por equipo · Q1 2026
+              Progreso de ORCs por equipo · Q1 2026
             </p>
           </div>
           <Link

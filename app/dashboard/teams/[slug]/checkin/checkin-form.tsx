@@ -117,7 +117,7 @@ export function CheckInForm({
             {/* Objective header */}
             <div className="flex items-center gap-2 mb-3">
               <span className="inline-flex items-center px-2.5 py-0.5 rounded-lg text-xs font-bold bg-gray-100 text-gray-500 tabular-nums">
-                OKR {group.objectiveNumber}
+                ORC {group.objectiveNumber}
               </span>
               <p className="text-sm font-medium text-gray-700 leading-snug line-clamp-1 min-w-0">
                 {group.objectiveTitle}
@@ -142,7 +142,7 @@ export function CheckInForm({
                     {/* KR label + title */}
                     <div className="flex items-start gap-2">
                       <span className="flex-shrink-0 mt-0.5 text-xs font-bold text-gray-400 tabular-nums">
-                        KR {group.objectiveNumber}.{kr.krNumber}
+                        RC {group.objectiveNumber}.{kr.krNumber}
                       </span>
                       <p className="text-sm font-medium text-gray-800 leading-snug">
                         {kr.title}
@@ -260,7 +260,7 @@ export function CheckInForm({
         >
           {isPending
             ? "Guardando…"
-            : `Guardar avance · ${totalKRs} ${totalKRs === 1 ? "KR" : "KRs"}`}
+            : `Guardar avance · ${totalKRs} ${totalKRs === 1 ? "RC" : "RCs"}`}
         </button>
       </div>
     </form>

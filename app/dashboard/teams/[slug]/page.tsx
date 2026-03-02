@@ -225,7 +225,7 @@ export default async function TeamPage({
                     <div className="flex items-start justify-between gap-3 mb-3">
                       <div className="flex items-start gap-3 min-w-0">
                         <span className="flex-shrink-0 mt-0.5 inline-flex items-center px-2.5 py-0.5 rounded-lg text-xs font-bold bg-gray-100 text-gray-500 tabular-nums">
-                          OKR {objNumber}
+                          ORC {objNumber}
                         </span>
                         <h2 className="text-base font-semibold text-gray-900 leading-snug">
                           {obj.title}
@@ -287,7 +287,7 @@ export default async function TeamPage({
                             <div className="flex items-start justify-between gap-3 mb-2">
                               <div className="flex items-start gap-2 min-w-0">
                                 <span className="flex-shrink-0 mt-0.5 text-xs font-bold text-gray-400 tabular-nums">
-                                  KR {objNumber}.{kr.number}
+                                  RC {objNumber}.{kr.number}
                                 </span>
                                 <p className="text-sm font-medium text-gray-800 leading-snug">
                                   {kr.title}
