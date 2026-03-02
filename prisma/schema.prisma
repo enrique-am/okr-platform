@@ -95,13 +95,14 @@ model Objective {
 }
 
 model KeyResult {
-  id           String        @id @default(cuid())
-  title        String
-  description  String?
-  type         KeyResultType @default(PERCENTAGE)
-  targetValue  Float
-  currentValue Float         @default(0)
-  unit         String?
+  id             String         @id @default(cuid())
+  title          String
+  description    String?
+  type           KeyResultType  @default(PERCENTAGE)
+  targetValue    Float
+  currentValue   Float          @default(0)
+  unit           String?
+  trackingStatus TrackingStatus @default(ON_TRACK)
 
   objectiveId String
   objective   Objective @relation(fields: [objectiveId], references: [id], onDelete: Cascade)

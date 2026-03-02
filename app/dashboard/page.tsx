@@ -3,6 +3,7 @@ import { redirect } from "next/navigation"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { Role, TrackingStatus } from "@prisma/client"
+import Link from "next/link"
 import { NavBar } from "@/components/dashboard/nav-bar"
 import { CompanySummary } from "@/components/dashboard/company-summary"
 import { TeamCard } from "@/components/dashboard/team-card"
@@ -84,11 +85,19 @@ export default async function DashboardPage() {
       <NavBar user={session.user} />
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
-        <div className="mb-6">
-          <h1 className="text-xl font-semibold text-gray-900">Dashboard</h1>
-          <p className="text-sm text-gray-400 mt-0.5">
-            Progreso de OKRs por equipo · Q1 2026
-          </p>
+        <div className="mb-6 flex items-start justify-between gap-4">
+          <div>
+            <h1 className="text-xl font-semibold text-gray-900">Dashboard</h1>
+            <p className="text-sm text-gray-400 mt-0.5">
+              Progreso de OKRs por equipo · Q1 2026
+            </p>
+          </div>
+          <Link
+            href="/dashboard/new"
+            className="flex-shrink-0 inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-brand-500 hover:bg-brand-600 text-white text-sm font-semibold transition-colors"
+          >
+            <span className="text-base leading-none">+</span> Nuevo objetivo
+          </Link>
         </div>
 
         <div className="mb-8">
