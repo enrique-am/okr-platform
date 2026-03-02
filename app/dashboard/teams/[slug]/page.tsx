@@ -83,6 +83,24 @@ function formatValue(
   return `${currentValue}${u} / ${targetValue}${u}`
 }
 
+function formatDate(date: Date): string {
+  return date.toLocaleDateString("es-MX", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  })
+}
+
+function formatCheckInValue(
+  type: KeyResultType,
+  value: number,
+  unit: string | null
+): string {
+  if (type === KeyResultType.BOOLEAN) return value > 0 ? "Completado" : "Pendiente"
+  const u = unit ? ` ${unit}` : ""
+  return `${value}${u}`
+}
+
 // ─── Page ────────────────────────────────────────────────────────────────────
 
 export default async function TeamPage({
@@ -105,7 +123,16 @@ export default async function TeamPage({
         where: { status: "ACTIVE" },
         orderBy: { createdAt: "asc" },
         include: {
-          keyResults: { orderBy: { createdAt: "asc" } },
+          keyResults: {
+            orderBy: { createdAt: "asc" },
+            include: {
+              checkIns: {
+                orderBy: { createdAt: "desc" },
+                take: 3,
+                include: { author: { select: { name: true } } },
+              },
+            },
+          },
         },
       },
     },
@@ -131,16 +158,34 @@ export default async function TeamPage({
         {/* Team header */}
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden mb-8">
           <div className="h-1 bg-brand-500" />
-          <div className="px-6 py-5 flex items-start justify-between gap-4">
+          <div className="px-6 py-5 flex items-start justify-between gap-4 flex-wrap">
             <div>
               <h1 className="text-2xl font-bold text-gray-900">{team.name}</h1>
               <p className="text-sm text-gray-400 mt-1">{lead}</p>
             </div>
-            <div className="text-right flex-shrink-0">
+            <div className="flex items-center gap-3 flex-wrap">
               <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-gray-100 text-gray-600">
                 {team.objectives.length}{" "}
                 {team.objectives.length === 1 ? "objetivo activo" : "objetivos activos"}
               </span>
+              <Link
+                href={`/dashboard/teams/${team.slug}/checkin`}
+                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold text-white bg-brand-500 hover:bg-brand-600 transition-colors"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 20 20"
+                  fill="currentColor"
+                  className="w-4 h-4"
+                >
+                  <path
+                    fillRule="evenodd"
+                    d="M10 18a8 8 0 100-16 8 8 0 000 16zm.75-11.25a.75.75 0 00-1.5 0v2.5h-2.5a.75.75 0 000 1.5h2.5v2.5a.75.75 0 001.5 0v-2.5h2.5a.75.75 0 000-1.5h-2.5v-2.5z"
+                    clipRule="evenodd"
+                  />
+                </svg>
+                Registrar avance
+              </Link>
             </div>
           </div>
         </div>
@@ -272,7 +317,7 @@ export default async function TeamPage({
                             </div>
 
                             {/* Meta row: type · current / target */}
-                            <div className="flex items-center gap-2 text-xs text-gray-400">
+                            <div className="flex items-center gap-2 text-xs text-gray-400 mb-3">
                               <span className="font-medium text-gray-500">
                                 {KR_TYPE_LABELS[kr.type]}
                               </span>
@@ -282,11 +327,59 @@ export default async function TeamPage({
                               <span>Objetivo: {valueStr.split(" / ")[1]}</span>
                             </div>
 
-                            {/* Notes */}
+                            {/* KR notes */}
                             {kr.description && (
-                              <p className="mt-2 text-xs text-gray-400 italic leading-relaxed">
+                              <p className="text-xs text-gray-400 italic leading-relaxed mb-3">
                                 {kr.description}
                               </p>
+                            )}
+
+                            {/* Check-in history */}
+                            {kr.checkIns.length > 0 && (
+                              <div className="mt-1">
+                                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">
+                                  Últimos avances
+                                </p>
+                                <div className="space-y-2">
+                                  {kr.checkIns.map((ci, ciIdx) => (
+                                    <div key={ci.id} className="flex items-start gap-2.5">
+                                      {/* Timeline dot + line */}
+                                      <div className="flex flex-col items-center flex-shrink-0 mt-0.5">
+                                        <span
+                                          className={`w-2 h-2 rounded-full flex-shrink-0 ${
+                                            ciIdx === 0 ? "bg-brand-500" : "bg-gray-300"
+                                          }`}
+                                        />
+                                        {ciIdx < kr.checkIns.length - 1 && (
+                                          <span className="w-px flex-1 bg-gray-200 mt-1 min-h-[12px]" />
+                                        )}
+                                      </div>
+
+                                      {/* Content */}
+                                      <div className="pb-2 min-w-0">
+                                        <div className="flex items-baseline gap-2 flex-wrap">
+                                          <span className="text-xs text-gray-400">
+                                            {formatDate(ci.createdAt)}
+                                          </span>
+                                          <span className="text-xs font-semibold text-gray-700 tabular-nums">
+                                            → {formatCheckInValue(kr.type, ci.value, kr.unit)}
+                                          </span>
+                                          {ci.author.name && (
+                                            <span className="text-xs text-gray-400">
+                                              — {ci.author.name.split(" ")[0]}
+                                            </span>
+                                          )}
+                                        </div>
+                                        {ci.note && (
+                                          <p className="text-xs text-gray-500 mt-0.5 leading-relaxed">
+                                            {ci.note}
+                                          </p>
+                                        )}
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
                             )}
                           </div>
                         )

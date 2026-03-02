@@ -126,6 +126,28 @@ export function TeamCard({ team }: { team: TeamData }) {
         </div>
       </div>
 
+      {/* Footer: check-in CTA */}
+      <div className="px-4 pb-4">
+        <Link
+          href={`/dashboard/teams/${team.slug}/checkin`}
+          className="flex items-center justify-center gap-1.5 w-full py-2 rounded-xl text-xs font-semibold text-brand-700 bg-brand-50 hover:bg-brand-100 border border-brand-200 transition-colors"
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 20 20"
+            fill="currentColor"
+            className="w-3.5 h-3.5"
+          >
+            <path
+              fillRule="evenodd"
+              d="M10 18a8 8 0 100-16 8 8 0 000 16zm.75-11.25a.75.75 0 00-1.5 0v2.5h-2.5a.75.75 0 000 1.5h2.5v2.5a.75.75 0 001.5 0v-2.5h2.5a.75.75 0 000-1.5h-2.5v-2.5z"
+              clipRule="evenodd"
+            />
+          </svg>
+          Registrar avance
+        </Link>
+      </div>
+
     </div>
   )
 }
