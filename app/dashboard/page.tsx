@@ -35,11 +35,16 @@ export default async function DashboardPage() {
         orderBy: { createdAt: "asc" },
         include: {
           keyResults: {
+            orderBy: { createdAt: "asc" },
             select: {
               id: true,
               title: true,
+              type: true,
               currentValue: true,
               targetValue: true,
+              unit: true,
+              trackingStatus: true,
+              description: true,
             },
           },
         },
@@ -53,12 +58,20 @@ export default async function DashboardPage() {
     .filter((t) => t.objectives.length > 0)
     .map((team) => ({
       id: team.id,
+      slug: team.slug,
       name: team.name,
       lead: team.members[0]?.name ?? "Sin líder asignado",
-      objectives: team.objectives.map((obj) => {
-        const krs = obj.keyResults.map((kr) => ({
+      objectives: team.objectives.map((obj, objIdx) => {
+        const krs = obj.keyResults.map((kr, krIdx) => ({
           id: kr.id,
+          number: krIdx + 1,
           title: kr.title,
+          type: kr.type,
+          currentValue: kr.currentValue,
+          targetValue: kr.targetValue,
+          unit: kr.unit,
+          trackingStatus: kr.trackingStatus,
+          description: kr.description,
           progress:
             kr.targetValue > 0
               ? Math.min(100, Math.round((kr.currentValue / kr.targetValue) * 100))
@@ -72,6 +85,7 @@ export default async function DashboardPage() {
 
         return {
           id: obj.id,
+          number: objIdx + 1,
           title: obj.title,
           progress,
           status: STATUS_MAP[obj.trackingStatus],

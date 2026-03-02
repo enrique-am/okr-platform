@@ -117,10 +117,12 @@ function emptyKR(): KRState {
 
 export function EditObjectiveForm({
   objectiveId,
+  objectiveNumber,
   teams,
   initialData,
 }: {
   objectiveId: string
+  objectiveNumber: number | null
   teams: Team[]
   initialData: InitialData
 }) {
@@ -308,6 +310,7 @@ export function EditObjectiveForm({
           <KRCard
             key={kr._id}
             index={idx}
+            objectiveNumber={objectiveNumber}
             kr={kr}
             canRemove={krs.length > 1}
             onChange={(patch) => updateKR(kr._id, patch)}
@@ -349,13 +352,18 @@ export function EditObjectiveForm({
 
 interface KRCardProps {
   index: number
+  objectiveNumber: number | null
   kr: KRState
   canRemove: boolean
   onChange: (patch: Partial<KRState>) => void
   onRemove: () => void
 }
 
-function KRCard({ index, kr, canRemove, onChange, onRemove }: KRCardProps) {
+function KRCard({ index, objectiveNumber, kr, canRemove, onChange, onRemove }: KRCardProps) {
+  const krLabel =
+    objectiveNumber != null
+      ? `KR ${objectiveNumber}.${index + 1}`
+      : `KR ${index + 1}`
   const isBoolean = kr.type === KeyResultType.BOOLEAN
 
   return (
@@ -363,7 +371,7 @@ function KRCard({ index, kr, canRemove, onChange, onRemove }: KRCardProps) {
       {/* Header */}
       <div className="flex items-center justify-between">
         <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">
-          KR {index + 1}
+          {krLabel}
         </span>
         {canRemove && (
           <button

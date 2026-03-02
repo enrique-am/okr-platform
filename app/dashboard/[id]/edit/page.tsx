@@ -35,6 +35,19 @@ export default async function EditObjectivePage({
 
   if (!objective) notFound()
 
+  // Derive this objective's 1-based position within its team (creation order)
+  const objectiveNumber = objective.teamId
+    ? await (async () => {
+        const siblings = await prisma.objective.findMany({
+          where: { teamId: objective.teamId! },
+          select: { id: true },
+          orderBy: { createdAt: "asc" },
+        })
+        const idx = siblings.findIndex((o) => o.id === objective.id)
+        return idx >= 0 ? idx + 1 : null
+      })()
+    : null
+
   const { quarter, year } = dateToQuarter(objective.startDate)
 
   const initialData = {
@@ -55,6 +68,8 @@ export default async function EditObjectivePage({
     })),
   }
 
+  const okrLabel = objectiveNumber != null ? `OKR ${objectiveNumber}` : "Objetivo"
+
   return (
     <div className="min-h-screen bg-gray-50">
       <NavBar user={session.user} />
@@ -70,14 +85,20 @@ export default async function EditObjectivePage({
         </div>
 
         <div className="mb-6">
-          <h1 className="text-xl font-semibold text-gray-900">Editar objetivo</h1>
-          <p className="text-sm text-gray-400 mt-0.5">
+          <div className="flex items-center gap-2 mb-1">
+            <span className="inline-flex items-center px-2.5 py-0.5 rounded-lg text-xs font-bold bg-gray-100 text-gray-500">
+              {okrLabel}
+            </span>
+            <h1 className="text-xl font-semibold text-gray-900">Editar objetivo</h1>
+          </div>
+          <p className="text-sm text-gray-400">
             Actualiza el objetivo, sus resultados clave y valores actuales.
           </p>
         </div>
 
         <EditObjectiveForm
           objectiveId={params.id}
+          objectiveNumber={objectiveNumber}
           teams={teams}
           initialData={initialData}
         />
