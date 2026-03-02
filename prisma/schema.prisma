@@ -42,6 +42,11 @@ enum UserStatus {
   PENDING
 }
 
+enum ObjectiveLevel {
+  COMPANY
+  TEAM
+}
+
 // ─── Core Domain Models ───────────────────────────────────────────────────────
 
 model User {
@@ -91,6 +96,9 @@ model Objective {
   trackingStatus  TrackingStatus  @default(ON_TRACK)
   startDate       DateTime
   endDate         DateTime
+
+  level ObjectiveLevel @default(TEAM)
+  year  Int?
 
   ownerId String?
   owner   User?   @relation("ObjectiveOwner", fields: [ownerId], references: [id], onDelete: SetNull)

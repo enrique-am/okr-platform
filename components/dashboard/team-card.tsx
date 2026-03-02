@@ -3,6 +3,7 @@
 import { useState } from "react"
 import Link from "next/link"
 import type { TeamData, Objective, KeyResult, OKRStatus } from "@/lib/mock-data"
+import { progressToTrafficLight } from "@/lib/progress"
 
 // ─── Status config ────────────────────────────────────────────────────────────
 
@@ -283,7 +284,7 @@ function KRRow({
   objectiveNumber: number
   kr: KeyResult
 }) {
-  const ts = TS_CONFIG[kr.trackingStatus]
+  const ts = TS_CONFIG[progressToTrafficLight(kr.progress)]
 
   const valueLabel =
     kr.type === "BOOLEAN"

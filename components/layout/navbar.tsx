@@ -47,6 +47,12 @@ export async function Navbar() {
           >
             Dashboard
           </Link>
+          <Link
+            href="/dashboard/company"
+            className="px-3 py-1.5 text-sm font-medium text-gray-600 hover:text-brand-600 hover:bg-gray-50 rounded-lg transition-colors"
+          >
+            Empresa
+          </Link>
           {role === "ADMIN" && (
             <Link
               href="/admin"

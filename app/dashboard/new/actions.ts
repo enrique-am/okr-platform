@@ -90,6 +90,7 @@ export async function createObjective(
     const objective = await prisma.objective.create({
       data: {
         title: input.title.trim(),
+        level: "TEAM",
         status: ObjectiveStatus.ACTIVE,
         trackingStatus: objectiveTrackingStatus,
         startDate,

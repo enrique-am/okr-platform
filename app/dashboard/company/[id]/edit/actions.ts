@@ -5,12 +5,12 @@ import { revalidatePath } from "next/cache"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { ObjectiveStatus, TrackingStatus, KeyResultType } from "@prisma/client"
-import { canEditObjective } from "@/lib/permissions"
+import { canManageCompanyObjective } from "@/lib/permissions"
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-export interface EditKRInput {
-  id?: string // undefined = new KR
+export interface EditCompanyKRInput {
+  id?: string
   title: string
   type: KeyResultType
   targetValue: number
@@ -20,110 +20,74 @@ export interface EditKRInput {
   trackingStatus: TrackingStatus
 }
 
-export interface UpdateObjectiveInput {
+export interface UpdateCompanyObjectiveInput {
   objectiveId: string
   title: string
-  teamId: string
-  quarter: 1 | 2 | 3 | 4
   year: number
+  ownerId: string | null
   objectiveStatus: ObjectiveStatus
-  keyResults: EditKRInput[]
+  keyResults: EditCompanyKRInput[]
 }
 
-export type UpdateObjectiveResult =
+export type UpdateCompanyObjectiveResult =
   | { success: true }
   | { success: false; error: string }
 
-// ─── Quarter → dates ──────────────────────────────────────────────────────────
-
-function quarterDates(quarter: 1 | 2 | 3 | 4, year: number) {
-  const ranges: Record<number, [string, string]> = {
-    1: [`${year}-01-01`, `${year}-03-31`],
-    2: [`${year}-04-01`, `${year}-06-30`],
-    3: [`${year}-07-01`, `${year}-09-30`],
-    4: [`${year}-10-01`, `${year}-12-31`],
-  }
-  const [start, end] = ranges[quarter]
-  return { startDate: new Date(start), endDate: new Date(end) }
-}
-
-// ─── Derive objective tracking status from KRs ────────────────────────────────
-
-function deriveTrackingStatus(krs: EditKRInput[]): TrackingStatus {
-  if (krs.some((kr) => kr.trackingStatus === TrackingStatus.OFF_TRACK)) return TrackingStatus.OFF_TRACK
-  if (krs.some((kr) => kr.trackingStatus === TrackingStatus.AT_RISK)) return TrackingStatus.AT_RISK
-  return TrackingStatus.ON_TRACK
-}
-
 // ─── Server action ────────────────────────────────────────────────────────────
 
-export async function updateObjective(
-  input: UpdateObjectiveInput
-): Promise<UpdateObjectiveResult> {
+export async function updateCompanyObjective(
+  input: UpdateCompanyObjectiveInput
+): Promise<UpdateCompanyObjectiveResult> {
   const session = await getServerSession(authOptions)
   if (!session?.user?.id) return { success: false, error: "No autenticado" }
 
-  // ─── Permission check ─────────────────────────────────────────────────────
-  // Fetch the objective's team from DB to verify permissions (never trust client input alone)
-  const [objective, dbUser] = await Promise.all([
-    prisma.objective.findUnique({
-      where: { id: input.objectiveId },
-      select: { teamId: true, level: true },
-    }),
-    prisma.user.findUnique({
-      where: { id: session.user.id },
-      select: { teamId: true },
-    }),
-  ])
-  if (objective?.level === "COMPANY") {
-    return { success: false, error: "Usa la sección Empresa para editar ORCs Empresariales" }
+  // Fetch objective to verify it exists and get current ownerId for permission check
+  const objective = await prisma.objective.findUnique({
+    where: { id: input.objectiveId },
+    select: { level: true, ownerId: true },
+  })
+  if (!objective || objective.level !== "COMPANY") {
+    return { success: false, error: "ORC Empresarial no encontrado" }
   }
-  if (!canEditObjective({ ...session.user, teamId: dbUser?.teamId }, objective?.teamId)) {
-    return { success: false, error: "Sin permiso para editar este objetivo" }
-  }
-  // LEAD cannot reassign an objective to a different team
-  if (session.user.role === "LEAD" && input.teamId !== dbUser?.teamId) {
-    return { success: false, error: "No puedes reasignar un objetivo a otro equipo" }
+
+  if (!canManageCompanyObjective(session.user, objective.ownerId)) {
+    return { success: false, error: "Sin permiso para editar este ORC Empresarial" }
   }
 
   if (!input.title.trim()) return { success: false, error: "El título es requerido" }
-  if (!input.teamId) return { success: false, error: "Selecciona un equipo" }
+  if (!input.year || input.year < 2020) return { success: false, error: "Año inválido" }
   if (input.keyResults.length === 0) return { success: false, error: "Agrega al menos un resultado clave" }
   if (input.keyResults.some((kr) => !kr.title.trim())) {
     return { success: false, error: "Todos los resultados clave deben tener un título" }
   }
 
-  const { startDate, endDate } = quarterDates(input.quarter, input.year)
-  const trackingStatus = deriveTrackingStatus(input.keyResults)
+  const startDate = new Date(input.year, 0, 1)
+  const endDate   = new Date(input.year, 11, 31)
 
   try {
-    // Determine which existing KRs were removed
     const existing = await prisma.keyResult.findMany({
       where: { objectiveId: input.objectiveId },
       select: { id: true },
     })
     const existingIds = new Set(existing.map((kr) => kr.id))
-    const keptIds = new Set(input.keyResults.filter((kr) => kr.id).map((kr) => kr.id!))
+    const keptIds     = new Set(input.keyResults.filter((kr) => kr.id).map((kr) => kr.id!))
     const idsToDelete = [...existingIds].filter((id) => !keptIds.has(id))
 
     await prisma.$transaction([
-      // Update objective
       prisma.objective.update({
         where: { id: input.objectiveId },
         data: {
           title: input.title.trim(),
-          teamId: input.teamId,
+          year: input.year,
           startDate,
           endDate,
           status: input.objectiveStatus,
-          trackingStatus,
+          ownerId: input.ownerId || null,
         },
       }),
-      // Delete removed KRs
       ...(idsToDelete.length > 0
         ? [prisma.keyResult.deleteMany({ where: { id: { in: idsToDelete } } })]
         : []),
-      // Update existing KRs
       ...input.keyResults
         .filter((kr) => kr.id)
         .map((kr) =>
@@ -140,7 +104,6 @@ export async function updateObjective(
             },
           })
         ),
-      // Create new KRs
       ...input.keyResults
         .filter((kr) => !kr.id)
         .map((kr) =>
@@ -159,10 +122,10 @@ export async function updateObjective(
         ),
     ])
 
-    revalidatePath("/dashboard")
+    revalidatePath("/dashboard/company")
     return { success: true }
   } catch (e) {
-    console.error("updateObjective error:", e)
+    console.error("updateCompanyObjective error:", e)
     return { success: false, error: "Error al guardar en la base de datos" }
   }
 }

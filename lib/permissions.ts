@@ -32,6 +32,23 @@ export function canEditObjective(
 }
 
 /**
+ * Can the user create or edit a COMPANY-level ORC Empresarial?
+ * ADMIN and EXECUTIVE: always yes.
+ * LEAD: only if they are the assigned owner of that specific objective.
+ * MEMBER: never.
+ */
+export function canManageCompanyObjective(
+  user: PermissionUser,
+  objectiveOwnerId?: string | null
+): boolean {
+  if (user.role === "ADMIN" || user.role === "EXECUTIVE") return true
+  if (user.role === "LEAD") {
+    return !!objectiveOwnerId && objectiveOwnerId === user.id
+  }
+  return false
+}
+
+/**
  * Can the user submit a check-in for a team?
  * ADMIN: always yes.
  * LEAD and MEMBER: only for their own team.

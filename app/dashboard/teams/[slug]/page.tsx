@@ -3,10 +3,11 @@ import { redirect, notFound } from "next/navigation"
 import Link from "next/link"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
-import { Role, TrackingStatus, KeyResultType } from "@prisma/client"
+import { Role, KeyResultType } from "@prisma/client"
 import { AppLayout } from "@/components/layout/app-layout"
 import type { Metadata } from "next"
 import { canEditObjective, canSubmitCheckin } from "@/lib/permissions"
+import { calcKRProgress, progressToTrafficLight } from "@/lib/progress"
 
 // ─── Metadata ─────────────────────────────────────────────────────────────────
 
@@ -24,8 +25,10 @@ export async function generateMetadata({
 
 // ─── Config maps ─────────────────────────────────────────────────────────────
 
+import type { TrafficLight } from "@/lib/progress"
+
 const TRACKING_CONFIG: Record<
-  TrackingStatus,
+  TrafficLight,
   { label: string; dot: string; bar: string; badge: string; border: string }
 > = {
   ON_TRACK: {
@@ -59,13 +62,6 @@ const KR_TYPE_LABELS: Record<KeyResultType, string> = {
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
-
-function calcProgress(type: KeyResultType, currentValue: number, targetValue: number): number {
-  if (type === KeyResultType.BOOLEAN) return currentValue > 0 ? 100 : 0
-  return targetValue > 0
-    ? Math.min(100, Math.round((currentValue / targetValue) * 100))
-    : 0
-}
 
 function formatValue(
   type: KeyResultType,
@@ -191,12 +187,10 @@ export default async function TeamPage({ params }: { params: { slug: string } })
         <div className="space-y-6">
           {team.objectives.map((obj, objIdx) => {
             const objNumber = objIdx + 1
-            const tsCfg = TRACKING_CONFIG[obj.trackingStatus]
-
             const krsWithProgress = obj.keyResults.map((kr, krIdx) => ({
               ...kr,
               number: krIdx + 1,
-              progress: calcProgress(kr.type, kr.currentValue, kr.targetValue),
+              progress: calcKRProgress(kr.type, kr.currentValue, kr.targetValue),
             }))
 
             const objProgress =
@@ -206,6 +200,9 @@ export default async function TeamPage({ params }: { params: { slug: string } })
                       krsWithProgress.length
                   )
                 : 0
+
+            // Derive traffic light from progress using new thresholds
+            const tsCfg = TRACKING_CONFIG[progressToTrafficLight(objProgress)]
 
             return (
               <section
@@ -267,7 +264,7 @@ export default async function TeamPage({ params }: { params: { slug: string } })
                 {krsWithProgress.length > 0 && (
                   <div className="border-t border-gray-100 divide-y divide-gray-50">
                     {krsWithProgress.map((kr) => {
-                      const krCfg = TRACKING_CONFIG[kr.trackingStatus]
+                      const krCfg = TRACKING_CONFIG[progressToTrafficLight(kr.progress)]
                       const valueStr = formatValue(kr.type, kr.currentValue, kr.targetValue, kr.unit)
 
                       return (
