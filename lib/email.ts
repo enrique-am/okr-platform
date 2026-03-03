@@ -339,3 +339,141 @@ export async function sendDeadlineReminder(
     html: emailWrapper(content),
   })
 }
+
+// ─── Feedback Report Notification ────────────────────────────────────────────
+
+const PRIORITY_LABELS: Record<string, string> = {
+  HIGH:   "🔴 Muy importante",
+  MEDIUM: "🟡 Útil",
+  LOW:    "🔵 Sería bonito tener",
+}
+
+interface FeedbackEmailData {
+  type: "BUG" | "FEATURE"
+  title: string | null
+  description: string
+  stepsToReproduce: string | null
+  screenshotBase64: string | null
+  priority: string | null
+  pageUrl: string
+  userAgent: string
+  submittedBy: {
+    name: string | null
+    email: string
+    role: string
+    teamName: string | null
+  }
+  createdAt: Date
+}
+
+export async function sendFeedbackEmail(to: string, data: FeedbackEmailData) {
+  const isBug = data.type === "BUG"
+  const emoji = isBug ? "🐛" : "💡"
+  const typeLabel = isBug ? "Reporte de error" : "Sugerencia de mejora"
+  const subject = isBug
+    ? `🐛 Nuevo reporte de error — ${new URL(data.pageUrl).pathname}`
+    : `💡 Nueva sugerencia — ${data.title ?? "sin título"}`
+
+  const ts = new Date(data.createdAt).toLocaleString("es-MX", {
+    day: "numeric", month: "long", year: "numeric",
+    hour: "2-digit", minute: "2-digit",
+  })
+
+  const screenshotHtml = data.screenshotBase64
+    ? `<tr>
+        <td style="padding:16px 0 0;">
+          <p style="margin:0 0 8px;font-size:11px;font-weight:600;color:#374151;text-transform:uppercase;letter-spacing:0.5px;">Captura de pantalla</p>
+          <img src="${data.screenshotBase64}" alt="Screenshot" style="max-width:100%;border-radius:8px;border:1px solid #e5e7eb;" />
+        </td>
+      </tr>`
+    : ""
+
+  const stepsHtml = data.stepsToReproduce
+    ? `<tr>
+        <td style="padding:14px 0 0;">
+          <p style="margin:0 0 6px;font-size:11px;font-weight:600;color:#374151;text-transform:uppercase;letter-spacing:0.5px;">¿Cómo se reproduce?</p>
+          <p style="margin:0;font-size:13px;color:#374151;line-height:1.65;white-space:pre-wrap;">${data.stepsToReproduce}</p>
+        </td>
+      </tr>`
+    : ""
+
+  const priorityHtml = data.priority
+    ? `<tr>
+        <td style="padding:14px 0 0;">
+          <p style="margin:0 0 6px;font-size:11px;font-weight:600;color:#374151;text-transform:uppercase;letter-spacing:0.5px;">Prioridad</p>
+          <p style="margin:0;font-size:13px;color:#374151;">${PRIORITY_LABELS[data.priority] ?? data.priority}</p>
+        </td>
+      </tr>`
+    : ""
+
+  const titleHtml = data.title
+    ? `<tr>
+        <td style="padding:14px 0 0;">
+          <p style="margin:0 0 6px;font-size:11px;font-weight:600;color:#374151;text-transform:uppercase;letter-spacing:0.5px;">Título</p>
+          <p style="margin:0;font-size:14px;font-weight:600;color:#111827;">${data.title}</p>
+        </td>
+      </tr>`
+    : ""
+
+  const content = `
+    <!-- Type badge -->
+    <div style="margin-bottom:20px;">
+      <span style="display:inline-block;background-color:${isBug ? "#fef2f2" : "#f0fdf4"};color:${isBug ? "#dc2626" : "#16a34a"};border:1px solid ${isBug ? "#fecaca" : "#bbf7d0"};border-radius:8px;padding:4px 12px;font-size:12px;font-weight:700;">
+        ${emoji} ${typeLabel}
+      </span>
+    </div>
+
+    <!-- Main content -->
+    <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:20px;">
+      ${titleHtml}
+      <tr>
+        <td style="padding:${data.title ? "14px" : "0"} 0 0;">
+          <p style="margin:0 0 6px;font-size:11px;font-weight:600;color:#374151;text-transform:uppercase;letter-spacing:0.5px;">${isBug ? "¿Qué pasó?" : "¿Qué te gustaría y por qué?"}</p>
+          <p style="margin:0;font-size:13px;color:#374151;line-height:1.65;white-space:pre-wrap;">${data.description}</p>
+        </td>
+      </tr>
+      ${stepsHtml}
+      ${priorityHtml}
+      ${screenshotHtml}
+    </table>
+
+    <!-- Meta info -->
+    <table width="100%" cellpadding="0" cellspacing="0" border="0"
+           style="background-color:#f9fafb;border-radius:10px;padding:14px 16px;margin-bottom:4px;">
+      <tr>
+        <td style="padding-bottom:10px;">
+          <p style="margin:0 0 8px;font-size:11px;font-weight:600;color:#374151;text-transform:uppercase;letter-spacing:0.5px;">Enviado por</p>
+          <p style="margin:0;font-size:13px;color:#374151;">
+            <strong>${data.submittedBy.name ?? "Sin nombre"}</strong>
+            &nbsp;·&nbsp; ${data.submittedBy.email}
+            &nbsp;·&nbsp; ${data.submittedBy.role}
+            ${data.submittedBy.teamName ? `&nbsp;·&nbsp; ${data.submittedBy.teamName}` : ""}
+          </p>
+        </td>
+      </tr>
+      <tr>
+        <td style="padding-bottom:6px;">
+          <p style="margin:0 0 4px;font-size:11px;font-weight:600;color:#374151;text-transform:uppercase;letter-spacing:0.5px;">Página</p>
+          <p style="margin:0;font-size:12px;color:#6b7280;word-break:break-all;">${data.pageUrl}</p>
+        </td>
+      </tr>
+      <tr>
+        <td>
+          <p style="margin:0 0 4px;font-size:11px;font-weight:600;color:#374151;text-transform:uppercase;letter-spacing:0.5px;">Fecha</p>
+          <p style="margin:0;font-size:12px;color:#6b7280;">${ts}</p>
+        </td>
+      </tr>
+    </table>
+
+    <p style="margin:12px 0 0;font-size:11px;color:#9ca3af;">
+      Navegador: ${data.userAgent}
+    </p>
+  `
+
+  await resend.emails.send({
+    from: FROM,
+    to,
+    subject,
+    html: emailWrapper(content),
+  })
+}

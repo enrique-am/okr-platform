@@ -47,6 +47,17 @@ enum ObjectiveLevel {
   TEAM
 }
 
+enum FeedbackType {
+  BUG
+  FEATURE
+}
+
+enum FeedbackPriority {
+  HIGH
+  MEDIUM
+  LOW
+}
+
 // ─── Core Domain Models ───────────────────────────────────────────────────────
 
 model User {
@@ -63,9 +74,10 @@ model User {
   teamId String?
   team   Team?   @relation(fields: [teamId], references: [id])
 
-  ownedObjectives Objective[] @relation("ObjectiveOwner")
-  checkIns        CheckIn[]
-  activityLogs    ActivityLog[]
+  ownedObjectives  Objective[]      @relation("ObjectiveOwner")
+  checkIns         CheckIn[]
+  activityLogs     ActivityLog[]
+  feedbackReports  FeedbackReport[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -157,6 +169,31 @@ model ActivityLog {
 
   @@index([userId])
   @@index([action])
+  @@index([createdAt])
+}
+
+// ─── Feedback ─────────────────────────────────────────────────────────────────
+
+model FeedbackReport {
+  id               String            @id @default(cuid())
+  type             FeedbackType
+  title            String?
+  description      String            @db.Text
+  stepsToReproduce String?           @db.Text
+  screenshotBase64 String?           @db.Text
+  priority         FeedbackPriority?
+  pageUrl          String
+  userAgent        String
+  read             Boolean           @default(false)
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@index([type])
+  @@index([read])
+  @@index([userId])
   @@index([createdAt])
 }
 

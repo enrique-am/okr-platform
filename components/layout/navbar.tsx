@@ -1,6 +1,7 @@
 import { getServerSession } from "next-auth"
 import Link from "next/link"
 import { authOptions } from "@/lib/auth"
+import { prisma } from "@/lib/prisma"
 import { SignOutButton } from "@/components/auth/sign-out-button"
 
 const ROLE_LABELS: Record<string, string> = {
@@ -21,6 +22,15 @@ export async function Navbar() {
   const session = await getServerSession(authOptions)
   const user = session?.user
   const role = user?.role ?? ""
+
+  let unreadFeedback = 0
+  if (role === "ADMIN") {
+    try {
+      unreadFeedback = await prisma.feedbackReport.count({ where: { read: false } })
+    } catch {
+      // Prisma client may be stale — run `npx prisma generate` and restart the server
+    }
+  }
 
   return (
     <nav className="bg-white border-b border-gray-200 sticky top-0 z-30">
@@ -56,9 +66,14 @@ export async function Navbar() {
           {role === "ADMIN" && (
             <Link
               href="/admin"
-              className="px-3 py-1.5 text-sm font-medium text-gray-600 hover:text-brand-600 hover:bg-gray-50 rounded-lg transition-colors"
+              className="relative px-3 py-1.5 text-sm font-medium text-gray-600 hover:text-brand-600 hover:bg-gray-50 rounded-lg transition-colors flex items-center gap-1.5"
             >
               Admin
+              {unreadFeedback > 0 && (
+                <span className="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-red-500 text-white text-[10px] font-bold leading-none">
+                  {unreadFeedback > 99 ? "99+" : unreadFeedback}
+                </span>
+              )}
             </Link>
           )}
         </div>

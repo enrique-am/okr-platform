@@ -7,6 +7,7 @@ const TABS = [
   { href: "/admin/users", label: "Usuarios" },
   { href: "/admin/teams", label: "Equipos" },
   { href: "/admin/activity", label: "Actividad" },
+  { href: "/admin/feedback", label: "Feedback" },
 ]
 
 export function AdminNav() {

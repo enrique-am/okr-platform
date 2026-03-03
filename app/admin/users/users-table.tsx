@@ -9,6 +9,7 @@ import {
   deactivateUser,
   reactivateUser,
   deleteUser,
+  cancelInvite,
   type BulkInviteRow,
 } from "./actions"
 import { startImpersonation } from "./impersonate-action"
@@ -93,11 +94,13 @@ function UserRowComponent({
   teams,
   currentUserId,
   onDelete,
+  onCancelInvite,
 }: {
   user: UserRow
   teams: Team[]
   currentUserId: string
   onDelete: (user: UserRow) => void
+  onCancelInvite: (user: UserRow) => void
 }) {
   const [role, setRole] = useState(user.role)
   const [teamId, setTeamId] = useState(user.teamId ?? "")
@@ -224,37 +227,49 @@ function UserRowComponent({
       {/* Actions */}
       <td className="px-4 py-3">
         <div className="flex items-center gap-2 flex-wrap">
-          <button
-            onClick={handleToggleStatus}
-            disabled={isPending || user.status === "PENDING"}
-            className={`text-xs font-medium px-3 py-1.5 rounded-lg border transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${
-              isInactive
-                ? "border-green-200 text-green-700 hover:bg-green-50"
-                : "border-gray-200 text-gray-600 hover:bg-gray-50"
-            }`}
-          >
-            {isInactive ? "Reactivar" : "Desactivar"}
-          </button>
-          <button
-            onClick={() => onDelete(user)}
-            disabled={!isInactive || isPending}
-            className="text-xs font-medium px-3 py-1.5 rounded-lg border border-red-200 text-red-600 hover:bg-red-50 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-          >
-            Eliminar
-          </button>
-          {canImpersonate && (
+          {user.status === "PENDING" ? (
             <button
-              onClick={() => {
-                startTransition(async () => {
-                  await startImpersonation(user.id)
-                })
-              }}
+              onClick={() => onCancelInvite(user)}
               disabled={isPending}
-              title={`Ver la app como ${user.name ?? user.email}`}
-              className="text-xs font-medium px-3 py-1.5 rounded-lg border border-brand-200 text-brand-700 hover:bg-brand-50 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+              className="text-xs font-medium px-3 py-1.5 rounded-lg border border-red-200 text-red-600 hover:bg-red-50 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
             >
-              Impersonar
+              Cancelar invitación
             </button>
+          ) : (
+            <>
+              <button
+                onClick={handleToggleStatus}
+                disabled={isPending}
+                className={`text-xs font-medium px-3 py-1.5 rounded-lg border transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${
+                  isInactive
+                    ? "border-green-200 text-green-700 hover:bg-green-50"
+                    : "border-gray-200 text-gray-600 hover:bg-gray-50"
+                }`}
+              >
+                {isInactive ? "Reactivar" : "Desactivar"}
+              </button>
+              <button
+                onClick={() => onDelete(user)}
+                disabled={!isInactive || isPending}
+                className="text-xs font-medium px-3 py-1.5 rounded-lg border border-red-200 text-red-600 hover:bg-red-50 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                Eliminar
+              </button>
+              {canImpersonate && (
+                <button
+                  onClick={() => {
+                    startTransition(async () => {
+                      await startImpersonation(user.id)
+                    })
+                  }}
+                  disabled={isPending}
+                  title={`Ver la app como ${user.name ?? user.email}`}
+                  className="text-xs font-medium px-3 py-1.5 rounded-lg border border-brand-200 text-brand-700 hover:bg-brand-50 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  Impersonar
+                </button>
+              )}
+            </>
           )}
         </div>
       </td>
@@ -567,6 +582,59 @@ function DeleteModal({
   )
 }
 
+// ─── Cancel Invite Modal ──────────────────────────────────────────────────────
+
+function CancelInviteModal({
+  user,
+  onClose,
+}: {
+  user: UserRow | null
+  onClose: () => void
+}) {
+  const [isPending, startTransition] = useTransition()
+
+  function handleCancel() {
+    if (!user) return
+    startTransition(async () => {
+      const result = await cancelInvite(user.id)
+      if (result.success) onClose()
+    })
+  }
+
+  return (
+    <Modal open={!!user} onClose={onClose} title="Cancelar invitación">
+      <div className="space-y-4">
+        <p className="text-sm text-gray-600">
+          Se eliminará la invitación pendiente. El usuario no podrá iniciar sesión y
+          tendrás que volver a invitarlo si cambias de opinión.
+        </p>
+        {user && (
+          <div className="bg-amber-50 border border-amber-100 rounded-lg px-4 py-3">
+            <p className="text-xs font-semibold text-amber-700 mb-0.5">Invitación pendiente</p>
+            <p className="text-sm text-amber-900">{user.email}</p>
+          </div>
+        )}
+        <div className="flex gap-3">
+          <button
+            onClick={onClose}
+            disabled={isPending}
+            className="flex-1 border border-gray-200 text-gray-700 font-medium text-sm py-2.5 rounded-lg hover:bg-gray-50 transition-colors"
+          >
+            Volver
+          </button>
+          <button
+            onClick={handleCancel}
+            disabled={isPending}
+            className="flex-1 bg-red-600 hover:bg-red-700 text-white font-medium text-sm py-2.5 rounded-lg transition-colors disabled:opacity-60"
+          >
+            {isPending ? "Cancelando..." : "Cancelar invitación"}
+          </button>
+        </div>
+      </div>
+    </Modal>
+  )
+}
+
 // ─── UsersTable ───────────────────────────────────────────────────────────────
 
 // ─── Role Legend Modal ────────────────────────────────────────────────────────
@@ -625,6 +693,7 @@ export function UsersTable({
   const [inviteOpen, setInviteOpen] = useState(false)
   const [csvOpen, setCsvOpen] = useState(false)
   const [deleteTarget, setDeleteTarget] = useState<UserRow | null>(null)
+  const [cancelInviteTarget, setCancelInviteTarget] = useState<UserRow | null>(null)
   const [roleLegendOpen, setRoleLegendOpen] = useState(false)
 
   return (
@@ -694,6 +763,7 @@ export function UsersTable({
                   teams={teams}
                   currentUserId={currentUserId}
                   onDelete={setDeleteTarget}
+                  onCancelInvite={setCancelInviteTarget}
                 />
               ))}
             </tbody>
@@ -704,6 +774,7 @@ export function UsersTable({
       <InviteModal open={inviteOpen} onClose={() => setInviteOpen(false)} teams={teams} />
       <CsvImportModal open={csvOpen} onClose={() => setCsvOpen(false)} teams={teams} />
       <DeleteModal user={deleteTarget} onClose={() => setDeleteTarget(null)} />
+      <CancelInviteModal user={cancelInviteTarget} onClose={() => setCancelInviteTarget(null)} />
       <RoleLegendModal open={roleLegendOpen} onClose={() => setRoleLegendOpen(false)} />
     </>
   )

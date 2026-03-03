@@ -19,7 +19,8 @@ export const authOptions: NextAuthOptions = {
   },
   callbacks: {
     async signIn({ user }) {
-      if (!user.email) return true
+      if (!user.email) return false
+      if (!user.email.endsWith("@am.com.mx")) return "/login?error=domain_not_allowed"
 
       const dbUser = await prisma.user.findUnique({
         where: { email: user.email },

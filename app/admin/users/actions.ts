@@ -206,6 +206,31 @@ export async function reactivateUser(userId: string): Promise<Result> {
   }
 }
 
+// ─── Cancel pending invite ─────────────────────────────────────────────────────
+
+export async function cancelInvite(userId: string): Promise<Result> {
+  try {
+    const session = await assertAdmin()
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { status: true, email: true },
+    })
+    if (!user) return { success: false, error: "Usuario no encontrado" }
+    if (user.status !== UserStatus.PENDING) {
+      return { success: false, error: "Solo se pueden cancelar invitaciones pendientes" }
+    }
+    await logActivity(session.user.id, "CANCEL_INVITE", {
+      cancelledUserId: userId,
+      email: user.email,
+    })
+    await prisma.user.delete({ where: { id: userId } })
+    revalidatePath("/admin/users")
+    return { success: true }
+  } catch (e) {
+    return { success: false, error: e instanceof Error ? e.message : "Error desconocido" }
+  }
+}
+
 // ─── Delete user ───────────────────────────────────────────────────────────────
 
 export async function deleteUser(userId: string): Promise<Result> {

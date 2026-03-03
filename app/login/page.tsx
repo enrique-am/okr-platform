@@ -15,7 +15,7 @@ export default async function LoginPage({
   const session = await getServerSession(authOptions)
   if (session) redirect("/dashboard")
 
-  const isDeactivated = searchParams.error === "account_deactivated"
+  const errorType = searchParams.error
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center px-4">
@@ -36,11 +36,18 @@ export default async function LoginPage({
           </span>
         </div>
 
-        {/* Deactivation banner */}
-        {isDeactivated && (
+        {/* Error banners */}
+        {errorType === "account_deactivated" && (
           <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 mb-4">
             <p className="text-sm text-red-700">
               Tu cuenta ha sido desactivada. Contacta a tu administrador para más información.
+            </p>
+          </div>
+        )}
+        {errorType === "domain_not_allowed" && (
+          <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 mb-4">
+            <p className="text-sm text-amber-800">
+              Solo se permiten cuentas <strong>@am.com.mx</strong>. Inicia sesión con tu correo corporativo de Grupo AM.
             </p>
           </div>
         )}
