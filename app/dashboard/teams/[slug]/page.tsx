@@ -8,6 +8,7 @@ import { AppLayout } from "@/components/layout/app-layout"
 import type { Metadata } from "next"
 import { canEditObjective, canSubmitCheckin } from "@/lib/permissions"
 import { calcKRProgress, progressToTrafficLight, avgProgress } from "@/lib/progress"
+import { KRChangelogAccordion } from "./kr-changelog-accordion"
 
 // ─── Metadata ─────────────────────────────────────────────────────────────────
 
@@ -345,53 +346,11 @@ export default async function TeamPage({ params }: { params: { slug: string } })
 
                           {/* Check-in history */}
                           {kr.checkIns.length > 0 && (
-                            <div className="mt-1">
-                              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">
-                                Últimos avances
-                              </p>
-                              <div className="space-y-2">
-                                {kr.checkIns.map((ci, ciIdx) => (
-                                  <div key={ci.id} className="flex items-start gap-2.5">
-                                    <div className="flex flex-col items-center flex-shrink-0 mt-0.5">
-                                      <span
-                                        className={`w-2 h-2 rounded-full flex-shrink-0 ${
-                                          ciIdx === 0 ? "bg-brand-500" : "bg-gray-300"
-                                        }`}
-                                      />
-                                      {ciIdx < kr.checkIns.length - 1 && (
-                                        <span className="w-px flex-1 bg-gray-200 mt-1 min-h-[12px]" />
-                                      )}
-                                    </div>
-                                    <div className="pb-2 min-w-0">
-                                      <div className="flex items-baseline gap-2 flex-wrap">
-                                        <span className="text-xs text-gray-400">
-                                          {formatDate(ci.createdAt)}
-                                        </span>
-                                        <span className="text-xs font-semibold text-gray-700 tabular-nums">
-                                          → {formatCheckInValue(kr.type, ci.value, kr.unit)}
-                                        </span>
-                                        {ci.author ? (
-                                          ci.author.name && (
-                                            <span className="text-xs text-gray-400">
-                                              — {ci.author.name.split(" ")[0]}
-                                            </span>
-                                          )
-                                        ) : (
-                                          <span className="text-xs text-gray-400 italic">
-                                            — Usuario eliminado
-                                          </span>
-                                        )}
-                                      </div>
-                                      {ci.note && (
-                                        <p className="text-xs text-gray-500 mt-0.5 leading-relaxed">
-                                          {ci.note}
-                                        </p>
-                                      )}
-                                    </div>
-                                  </div>
-                                ))}
-                              </div>
-                            </div>
+                            <KRChangelogAccordion
+                              checkIns={kr.checkIns}
+                              krType={kr.type}
+                              unit={kr.unit}
+                            />
                           )}
                         </div>
                       )
