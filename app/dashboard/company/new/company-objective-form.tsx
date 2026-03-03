@@ -4,6 +4,9 @@ import { useState, useTransition } from "react"
 import { useRouter } from "next/navigation"
 import { createCompanyObjective } from "./actions"
 import type { CompanyKRInput } from "./actions"
+import { AiSuggestButton } from "@/components/ai/suggest-button"
+import { SuggestKRsButton } from "@/components/ai/suggest-krs-button"
+import type { KRSuggestion } from "@/components/ai/suggest-krs-button"
 
 // Local mirrors of Prisma enums (client components cannot import @prisma/client)
 const KeyResultType = {
@@ -85,6 +88,22 @@ export function CompanyObjectiveForm({ leads }: { leads: Lead[] }) {
     if (krs.length > 1) setKRs((prev) => prev.filter((kr) => kr._id !== id))
   }
 
+  function addKRFromSuggestion(suggestion: KRSuggestion) {
+    if (krs.length >= 5) return
+    setKRs((prev) => [
+      ...prev,
+      {
+        _id: Math.random().toString(36).slice(2),
+        title: suggestion.title,
+        type: suggestion.type as KeyResultType,
+        targetValue: suggestion.type === "BOOLEAN" ? 1 : suggestion.targetValue,
+        unit: suggestion.unit,
+        description: "",
+        trackingStatus: "ON_TRACK",
+      },
+    ])
+  }
+
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setError(null)
@@ -119,6 +138,12 @@ export function CompanyObjectiveForm({ leads }: { leads: Lead[] }) {
             placeholder="p.ej. Consolidar posición de liderazgo en el mercado"
             className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent"
             required
+          />
+          <AiSuggestButton
+            text={title}
+            type="objective"
+            teamName="Nivel Empresarial"
+            onAccept={(s) => setTitle(s)}
           />
         </div>
 
@@ -176,13 +201,20 @@ export function CompanyObjectiveForm({ leads }: { leads: Lead[] }) {
             Resultados clave <span className="font-normal text-gray-400 normal-case">({krs.length}/5)</span>
           </h2>
           {krs.length < 5 && (
-            <button
-              type="button"
-              onClick={addKR}
-              className="inline-flex items-center gap-1 text-sm font-medium text-brand-600 hover:text-brand-700"
-            >
-              <span className="text-lg leading-none">+</span> Agregar resultado
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={addKR}
+                className="inline-flex items-center gap-1 text-sm font-medium text-brand-600 hover:text-brand-700"
+              >
+                <span className="text-lg leading-none">+</span> Agregar resultado
+              </button>
+              <SuggestKRsButton
+                objectiveTitle={title}
+                teamName="Nivel Empresarial"
+                onAdd={addKRFromSuggestion}
+              />
+            </div>
           )}
         </div>
 
@@ -191,9 +223,11 @@ export function CompanyObjectiveForm({ leads }: { leads: Lead[] }) {
             key={kr._id}
             index={idx}
             kr={kr}
+            objectiveTitle={title}
             canRemove={krs.length > 1}
             onChange={(patch) => updateKR(kr._id, patch)}
             onRemove={() => removeKR(kr._id)}
+            onAiSuggest={(s) => updateKR(kr._id, { title: s })}
           />
         ))}
       </section>
@@ -230,15 +264,19 @@ export function CompanyObjectiveForm({ leads }: { leads: Lead[] }) {
 function KRCard({
   index,
   kr,
+  objectiveTitle,
   canRemove,
   onChange,
   onRemove,
+  onAiSuggest,
 }: {
   index: number
   kr: KRState
+  objectiveTitle: string
   canRemove: boolean
   onChange: (patch: Partial<KRState>) => void
   onRemove: () => void
+  onAiSuggest: (suggestion: string) => void
 }) {
   const isBoolean = kr.type === "BOOLEAN"
 
@@ -264,6 +302,13 @@ function KRCard({
           placeholder="p.ej. Ingresos anuales totales: $500M MXN"
           className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent"
           required
+        />
+        <AiSuggestButton
+          text={kr.title}
+          type="key_result"
+          teamName="Nivel Empresarial"
+          parentObjective={objectiveTitle}
+          onAccept={onAiSuggest}
         />
       </div>
 
