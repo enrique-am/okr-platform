@@ -47,6 +47,7 @@ const ACTION_LABELS: Record<string, { label: string; classes: string }> = {
   DEACTIVATE_USER: { label: "Desactivó usuario", classes: "bg-amber-50 text-amber-700 border-amber-200" },
   REACTIVATE_USER: { label: "Reactivó usuario", classes: "bg-green-50 text-green-700 border-green-200" },
   DELETE_USER: { label: "Eliminó usuario", classes: "bg-red-50 text-red-700 border-red-200" },
+  IMPERSONATE_START: { label: "Inició impersonación", classes: "bg-amber-50 text-amber-700 border-amber-200" },
 }
 
 const ALL_ACTIONS = Object.keys(ACTION_LABELS)
@@ -194,11 +195,18 @@ export function ActivityTable({
                       {log.user.teamName ?? "—"}
                     </td>
                     <td className="px-4 py-3">
-                      <span
-                        className={`inline-block text-xs font-semibold px-2.5 py-1 rounded-full border ${actionInfo.classes}`}
-                      >
-                        {actionInfo.label}
-                      </span>
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span
+                          className={`inline-block text-xs font-semibold px-2.5 py-1 rounded-full border ${actionInfo.classes}`}
+                        >
+                          {actionInfo.label}
+                        </span>
+                        {Boolean(log.metadata.impersonatedBy) && (
+                          <span className="inline-block text-xs font-semibold px-2 py-0.5 rounded-full border bg-amber-50 text-amber-700 border-amber-200">
+                            Impersonado
+                          </span>
+                        )}
+                      </div>
                     </td>
                     <td className="px-4 py-3 text-sm text-gray-500 whitespace-nowrap">
                       {new Date(log.createdAt).toLocaleString("es-MX", {

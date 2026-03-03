@@ -20,7 +20,7 @@ export default async function DashboardPage() {
   const rawTeams = await prisma.team.findMany({
     include: {
       members: {
-        where: { role: Role.LEAD },
+        where: { role: { in: [Role.LEAD, Role.ADMIN] } },
         take: 1,
         select: { name: true },
       },
@@ -135,7 +135,7 @@ export default async function DashboardPage() {
         <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-4">
           Equipos
         </h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
           {teams.map((team) => (
             <TeamCard
               key={team.id}

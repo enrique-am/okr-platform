@@ -1,9 +1,14 @@
+import { getServerSession } from "next-auth"
+import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { AppLayout } from "@/components/layout/app-layout"
 import { AdminNav } from "@/components/admin/admin-nav"
 import { UsersTable } from "./users-table"
 
 export default async function AdminUsersPage() {
+  const session = await getServerSession(authOptions)
+  const currentUserId = session?.user?.id ?? ""
+
   const [users, teams] = await Promise.all([
     prisma.user.findMany({
       include: { team: { select: { id: true, name: true } } },
@@ -34,7 +39,7 @@ export default async function AdminUsersPage() {
   return (
     <AppLayout breadcrumbs={[{ label: "Admin", href: "/admin" }, { label: "Usuarios" }]}>
       <AdminNav />
-      <UsersTable users={serialized} teams={teams} />
+      <UsersTable users={serialized} teams={teams} currentUserId={currentUserId} />
     </AppLayout>
   )
 }

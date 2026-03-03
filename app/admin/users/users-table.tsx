@@ -11,6 +11,7 @@ import {
   deleteUser,
   type BulkInviteRow,
 } from "./actions"
+import { startImpersonation } from "./impersonate-action"
 import { Modal } from "@/components/ui/modal"
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -90,10 +91,12 @@ function relativeDate(isoString: string | null, status: string): { text: string;
 function UserRowComponent({
   user,
   teams,
+  currentUserId,
   onDelete,
 }: {
   user: UserRow
   teams: Team[]
+  currentUserId: string
   onDelete: (user: UserRow) => void
 }) {
   const [role, setRole] = useState(user.role)
@@ -144,6 +147,7 @@ function UserRowComponent({
   const statusInfo = STATUS_BADGE[user.status] ?? STATUS_BADGE.ACTIVE
   const lastLogin = relativeDate(user.lastLoginAt, user.status)
   const isInactive = user.status === "INACTIVE"
+  const canImpersonate = user.role !== "ADMIN" && user.id !== currentUserId && !isInactive
 
   return (
     <tr
@@ -219,7 +223,7 @@ function UserRowComponent({
 
       {/* Actions */}
       <td className="px-4 py-3">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <button
             onClick={handleToggleStatus}
             disabled={isPending || user.status === "PENDING"}
@@ -238,6 +242,20 @@ function UserRowComponent({
           >
             Eliminar
           </button>
+          {canImpersonate && (
+            <button
+              onClick={() => {
+                startTransition(async () => {
+                  await startImpersonation(user.id)
+                })
+              }}
+              disabled={isPending}
+              title={`Ver la app como ${user.name ?? user.email}`}
+              className="text-xs font-medium px-3 py-1.5 rounded-lg border border-brand-200 text-brand-700 hover:bg-brand-50 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              Impersonar
+            </button>
+          )}
         </div>
       </td>
     </tr>
@@ -595,7 +613,15 @@ function RoleLegendModal({ open, onClose }: { open: boolean; onClose: () => void
 
 // ─── UsersTable ───────────────────────────────────────────────────────────────
 
-export function UsersTable({ users, teams }: { users: UserRow[]; teams: Team[] }) {
+export function UsersTable({
+  users,
+  teams,
+  currentUserId,
+}: {
+  users: UserRow[]
+  teams: Team[]
+  currentUserId: string
+}) {
   const [inviteOpen, setInviteOpen] = useState(false)
   const [csvOpen, setCsvOpen] = useState(false)
   const [deleteTarget, setDeleteTarget] = useState<UserRow | null>(null)
@@ -666,6 +692,7 @@ export function UsersTable({ users, teams }: { users: UserRow[]; teams: Team[] }
                   key={user.id}
                   user={user}
                   teams={teams}
+                  currentUserId={currentUserId}
                   onDelete={setDeleteTarget}
                 />
               ))}

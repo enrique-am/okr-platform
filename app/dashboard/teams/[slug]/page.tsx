@@ -7,7 +7,7 @@ import { Role, KeyResultType } from "@prisma/client"
 import { AppLayout } from "@/components/layout/app-layout"
 import type { Metadata } from "next"
 import { canEditObjective, canSubmitCheckin } from "@/lib/permissions"
-import { calcKRProgress, progressToTrafficLight } from "@/lib/progress"
+import { calcKRProgress, progressToTrafficLight, avgProgress } from "@/lib/progress"
 
 // ─── Metadata ─────────────────────────────────────────────────────────────────
 
@@ -98,7 +98,7 @@ export default async function TeamPage({ params }: { params: { slug: string } })
     where: { slug: params.slug },
     include: {
       members: {
-        where: { role: Role.LEAD },
+        where: { role: { in: [Role.LEAD, Role.ADMIN] } },
         take: 1,
         select: { name: true },
       },
@@ -133,6 +133,17 @@ export default async function TeamPage({ params }: { params: { slug: string } })
   const userCanEdit = canEditObjective(userCtx, team.id)
   const userCanCheckin = canSubmitCheckin(userCtx, team.id)
 
+  // Overall team progress: average of each active objective's average KR progress
+  const teamProgress = avgProgress(
+    team.objectives.map((obj) =>
+      avgProgress(
+        obj.keyResults.map((kr) => calcKRProgress(kr.type, kr.currentValue, kr.targetValue))
+      )
+    )
+  )
+  const teamTrafficLight = progressToTrafficLight(teamProgress)
+  const teamCfg = TRACKING_CONFIG[teamTrafficLight]
+
   return (
     <AppLayout
       breadcrumbs={[
@@ -145,9 +156,24 @@ export default async function TeamPage({ params }: { params: { slug: string } })
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden mb-8">
         <div className="h-1 bg-brand-500" />
         <div className="px-6 py-5 flex items-start justify-between gap-4 flex-wrap">
-          <div>
+          <div className="min-w-0">
             <h1 className="text-2xl font-bold text-gray-900">{team.name}</h1>
             <p className="text-sm text-gray-400 mt-1">{lead}</p>
+            {team.objectives.length > 0 && (
+              <div className="mt-3 flex items-center gap-3">
+                <div className="w-40 h-2 bg-gray-100 rounded-full overflow-hidden flex-shrink-0">
+                  <div
+                    className="h-full rounded-full transition-all duration-500"
+                    style={{ width: `${teamProgress}%`, backgroundColor: "#72bf44" }}
+                  />
+                </div>
+                <span className="text-sm font-semibold text-gray-600 tabular-nums">{teamProgress}%</span>
+                <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium ${teamCfg.badge}`}>
+                  <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${teamCfg.dot}`} />
+                  {teamCfg.label}
+                </span>
+              </div>
+            )}
           </div>
           <div className="flex items-center gap-3 flex-wrap">
             <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-gray-100 text-gray-600">
