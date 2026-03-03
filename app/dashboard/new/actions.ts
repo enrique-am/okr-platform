@@ -82,6 +82,9 @@ export async function createObjective(
   if (input.keyResults.some((kr) => !kr.title.trim())) {
     return { success: false, error: "Todos los resultados clave deben tener un título" }
   }
+  if (input.keyResults.some((kr) => kr.type !== KeyResultType.BOOLEAN && kr.targetValue <= 0)) {
+    return { success: false, error: "El valor objetivo debe ser mayor que 0" }
+  }
 
   const { startDate, endDate } = quarterDates(input.quarter, input.year)
   const objectiveTrackingStatus = deriveObjectiveStatus(input.keyResults)

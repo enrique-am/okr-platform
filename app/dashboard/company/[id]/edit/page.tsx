@@ -43,9 +43,12 @@ export default async function EditCompanyObjectivePage({
   const idx = siblings.findIndex((o) => o.id === objective.id)
   const objectiveNumber = idx >= 0 ? idx + 1 : null
 
+  const yr = objective.year ?? new Date().getFullYear()
   const initialData = {
     title: objective.title,
-    year: objective.year ?? new Date().getFullYear(),
+    year: yr,
+    startDate: objective.startDate.toISOString().slice(0, 10),
+    endDate: objective.endDate.toISOString().slice(0, 10),
     ownerId: objective.ownerId,
     objectiveStatus: objective.status as "ACTIVE" | "COMPLETED" | "CANCELLED",
     keyResults: objective.keyResults.map((kr) => ({

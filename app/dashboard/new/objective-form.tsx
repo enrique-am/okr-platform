@@ -130,7 +130,11 @@ export function ObjectiveForm({ teams }: { teams: Team[] }) {
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setError(null)
-
+    const badKR = krs.find((kr) => kr.type !== "BOOLEAN" && kr.targetValue <= 0)
+    if (badKR) {
+      setError("El valor objetivo debe ser mayor que 0")
+      return
+    }
     startTransition(async () => {
       const result = await createObjective({
         title,
@@ -372,15 +376,22 @@ function KRCard({ index, kr, teamName, parentObjective, canRemove, onChange, onR
       {!isBoolean && (
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Valor objetivo</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Valor objetivo <span className="text-red-400">*</span>
+            </label>
             <input
               type="number"
               value={kr.targetValue}
               onChange={(e) => onChange({ targetValue: Number(e.target.value) })}
-              min={0}
+              min={1}
               step={kr.type === KeyResultType.CURRENCY ? 1000 : 1}
-              className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent"
+              className={`w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent ${
+                kr.targetValue <= 0 ? "border-red-300 bg-red-50" : "border-gray-200"
+              }`}
             />
+            {kr.targetValue <= 0 && (
+              <p className="text-xs text-red-500 mt-1">Debe ser mayor que 0</p>
+            )}
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Unidad</label>

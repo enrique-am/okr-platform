@@ -6,7 +6,16 @@ export async function logActivity(
   action: string,
   metadata: Prisma.InputJsonValue = {}
 ) {
-  await prisma.activityLog.create({
-    data: { userId, action, metadata },
-  })
+  try {
+    await prisma.activityLog.create({
+      data: { userId, action, metadata },
+    })
+  } catch (err) {
+    // Non-fatal: log the failure but never crash the calling operation
+    console.error("[activity-log] Failed to write activity log", {
+      userId,
+      action,
+      error: err instanceof Error ? err.message : String(err),
+    })
+  }
 }

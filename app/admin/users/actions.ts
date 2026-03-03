@@ -28,6 +28,9 @@ const ROLE_LABELS: Record<string, string> = {
 export async function updateUserRole(userId: string, role: string): Promise<Result> {
   try {
     await assertAdmin()
+    if (!Object.values(Role).includes(role as Role)) {
+      return { success: false, error: "Rol inválido" }
+    }
     await prisma.user.update({
       where: { id: userId },
       data: { role: role as Role },
@@ -66,6 +69,9 @@ export async function inviteUser(
 
     if (!normalizedEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
       return { success: false, error: "Email inválido" }
+    }
+    if (!Object.values(Role).includes(role as Role)) {
+      return { success: false, error: "Rol inválido" }
     }
 
     const existing = await prisma.user.findUnique({ where: { email: normalizedEmail } })
@@ -129,11 +135,21 @@ export async function bulkInviteUsers(
     let created = 0
     let skipped = 0
 
-    for (const row of rows) {
+    // Batch-check existing emails in a single query instead of N individual findUnique calls
+    const normalizedRows = rows.map((row) => ({
+      ...row,
+      normalizedEmail: row.email.trim().toLowerCase(),
+    }))
+    const allEmails = normalizedRows.map((r) => r.normalizedEmail)
+    const existingUsers = await prisma.user.findMany({
+      where: { email: { in: allEmails } },
+      select: { email: true },
+    })
+    const existingEmailSet = new Set(existingUsers.map((u) => u.email))
+
+    for (const row of normalizedRows) {
       try {
-        const normalizedEmail = row.email.trim().toLowerCase()
-        const existing = await prisma.user.findUnique({ where: { email: normalizedEmail } })
-        if (existing) {
+        if (existingEmailSet.has(row.normalizedEmail)) {
           skipped++
           continue
         }
@@ -141,7 +157,7 @@ export async function bulkInviteUsers(
         const inviteToken = crypto.randomUUID()
         await prisma.user.create({
           data: {
-            email: normalizedEmail,
+            email: row.normalizedEmail,
             role: row.role as Role,
             teamId: row.teamId,
             status: UserStatus.PENDING,
@@ -150,12 +166,12 @@ export async function bulkInviteUsers(
         })
 
         try {
-          await sendInviteEmail(normalizedEmail, {
+          await sendInviteEmail(row.normalizedEmail, {
             roleName: ROLE_LABELS[row.role] || row.role,
             teamName: row.teamName,
           })
         } catch {
-          console.error("Failed to send invite email to", normalizedEmail)
+          console.error("Failed to send invite email to", row.normalizedEmail)
         }
 
         created++
@@ -242,13 +258,13 @@ export async function deleteUser(userId: string): Promise<Result> {
       return { success: false, error: "Solo se pueden eliminar usuarios inactivos" }
     }
 
-    // Log before delete (cascade will delete user's logs)
+    await prisma.user.delete({ where: { id: userId } })
+
+    // Log after delete succeeds (cascade already removed user's own logs)
     await logActivity(session.user.id, "DELETE_USER", {
       deletedUserId: userId,
       deletedEmail: user.email,
     })
-
-    await prisma.user.delete({ where: { id: userId } })
     revalidatePath("/admin/users")
     return { success: true }
   } catch (e) {

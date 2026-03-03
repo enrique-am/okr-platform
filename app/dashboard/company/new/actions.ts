@@ -22,6 +22,8 @@ export interface CompanyKRInput {
 export interface CreateCompanyObjectiveInput {
   title: string
   year: number
+  startDate?: string  // ISO date string override (e.g. "2025-04-01"); defaults to Jan 1
+  endDate?: string    // ISO date string override (e.g. "2025-09-30"); defaults to Dec 31
   ownerId: string | null
   keyResults: CompanyKRInput[]
 }
@@ -49,9 +51,12 @@ export async function createCompanyObjective(
   if (input.keyResults.some((kr) => !kr.title.trim())) {
     return { success: false, error: "Todos los resultados clave deben tener un título" }
   }
+  if (input.keyResults.some((kr) => kr.type !== KeyResultType.BOOLEAN && kr.targetValue <= 0)) {
+    return { success: false, error: "El valor objetivo debe ser mayor que 0" }
+  }
 
-  const startDate = new Date(input.year, 0, 1)   // Jan 1
-  const endDate   = new Date(input.year, 11, 31)  // Dec 31
+  const startDate = input.startDate ? new Date(input.startDate) : new Date(input.year, 0, 1)
+  const endDate   = input.endDate   ? new Date(input.endDate)   : new Date(input.year, 11, 31)
 
   try {
     const objective = await prisma.objective.create({

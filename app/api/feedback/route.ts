@@ -22,6 +22,16 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Tipo inválido" }, { status: 400 })
   }
 
+  if (priority && !Object.values(FeedbackPriority).includes(priority)) {
+    return NextResponse.json({ error: "Prioridad inválida" }, { status: 400 })
+  }
+
+  // ~2.74 MB is the base64 overhead for a 2 MB binary file (4/3 × 2 MB)
+  const MAX_SCREENSHOT_BASE64 = Math.ceil(2 * 1024 * 1024 * (4 / 3))
+  if (screenshotBase64 && screenshotBase64.length > MAX_SCREENSHOT_BASE64) {
+    return NextResponse.json({ error: "La captura de pantalla excede el tamaño máximo de 2 MB" }, { status: 400 })
+  }
+
   // Fetch the submitting user's details for the email
   const user = await prisma.user.findUnique({
     where: { id: session.user.id },

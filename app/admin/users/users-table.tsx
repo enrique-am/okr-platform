@@ -685,10 +685,16 @@ export function UsersTable({
   users,
   teams,
   currentUserId,
+  page,
+  totalPages,
+  totalUsers,
 }: {
   users: UserRow[]
   teams: Team[]
   currentUserId: string
+  page: number
+  totalPages: number
+  totalUsers: number
 }) {
   const [inviteOpen, setInviteOpen] = useState(false)
   const [csvOpen, setCsvOpen] = useState(false)
@@ -702,7 +708,7 @@ export function UsersTable({
         <div className="px-6 py-4 border-b border-gray-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <h2 className="text-sm font-semibold text-gray-700">
             Usuarios{" "}
-            <span className="font-normal text-gray-400">({users.length})</span>
+            <span className="font-normal text-gray-400">({totalUsers})</span>
           </h2>
           <div className="flex items-center gap-2">
             <button
@@ -769,6 +775,40 @@ export function UsersTable({
             </tbody>
           </table>
         </div>
+
+        {totalPages > 1 && (
+          <div className="px-6 py-3 border-t border-gray-100 flex items-center justify-between text-sm text-gray-500">
+            <span>
+              Página {page} de {totalPages}
+            </span>
+            <div className="flex items-center gap-2">
+              {page > 1 ? (
+                <a
+                  href={`?page=${page - 1}`}
+                  className="px-3 py-1.5 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors font-medium"
+                >
+                  ← Anterior
+                </a>
+              ) : (
+                <span className="px-3 py-1.5 rounded-lg border border-gray-100 text-gray-300 cursor-not-allowed font-medium">
+                  ← Anterior
+                </span>
+              )}
+              {page < totalPages ? (
+                <a
+                  href={`?page=${page + 1}`}
+                  className="px-3 py-1.5 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors font-medium"
+                >
+                  Siguiente →
+                </a>
+              ) : (
+                <span className="px-3 py-1.5 rounded-lg border border-gray-100 text-gray-300 cursor-not-allowed font-medium">
+                  Siguiente →
+                </span>
+              )}
+            </div>
+          </div>
+        )}
       </div>
 
       <InviteModal open={inviteOpen} onClose={() => setInviteOpen(false)} teams={teams} />

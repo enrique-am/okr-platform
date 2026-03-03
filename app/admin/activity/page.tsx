@@ -1,3 +1,6 @@
+import { getServerSession } from "next-auth"
+import { redirect } from "next/navigation"
+import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { AppLayout } from "@/components/layout/app-layout"
 import { AdminNav } from "@/components/admin/admin-nav"
@@ -16,6 +19,9 @@ export default async function AdminActivityPage({
 }: {
   searchParams: SearchParams
 }) {
+  const session = await getServerSession(authOptions)
+  if (session?.user?.role !== "ADMIN") redirect("/dashboard")
+
   const where: Record<string, unknown> = {}
 
   if (searchParams.user) where.userId = searchParams.user

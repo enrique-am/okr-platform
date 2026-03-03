@@ -31,6 +31,9 @@ export async function POST(req: NextRequest) {
   if (!objectiveTitle?.trim()) {
     return NextResponse.json({ error: "Parámetros requeridos" }, { status: 400 })
   }
+  if (objectiveTitle.length > 500) {
+    return NextResponse.json({ error: "El título es demasiado largo (máx. 500 caracteres)" }, { status: 400 })
+  }
 
   const userPrompt = `Sugiere 5 resultados clave para el siguiente objetivo del equipo "${teamName ?? ""}": "${objectiveTitle.trim()}"`
 

@@ -29,6 +29,9 @@ export async function POST(req: NextRequest) {
   if (!text?.trim() || !type) {
     return NextResponse.json({ error: "Parámetros requeridos" }, { status: 400 })
   }
+  if (text.length > 500) {
+    return NextResponse.json({ error: "El texto es demasiado largo (máx. 500 caracteres)" }, { status: 400 })
+  }
 
   const typeLabel = type === "objective" ? "objetivo" : "resultado clave"
   let userPrompt = `Reescribe este ${typeLabel} para el equipo "${teamName ?? ""}": "${text.trim()}"`

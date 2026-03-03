@@ -24,6 +24,8 @@ export interface UpdateCompanyObjectiveInput {
   objectiveId: string
   title: string
   year: number
+  startDate?: string  // ISO date string override; defaults to Jan 1 of year
+  endDate?: string    // ISO date string override; defaults to Dec 31 of year
   ownerId: string | null
   objectiveStatus: ObjectiveStatus
   keyResults: EditCompanyKRInput[]
@@ -60,9 +62,12 @@ export async function updateCompanyObjective(
   if (input.keyResults.some((kr) => !kr.title.trim())) {
     return { success: false, error: "Todos los resultados clave deben tener un título" }
   }
+  if (input.keyResults.some((kr) => kr.type !== KeyResultType.BOOLEAN && kr.targetValue <= 0)) {
+    return { success: false, error: "El valor objetivo debe ser mayor que 0" }
+  }
 
-  const startDate = new Date(input.year, 0, 1)
-  const endDate   = new Date(input.year, 11, 31)
+  const startDate = input.startDate ? new Date(input.startDate) : new Date(input.year, 0, 1)
+  const endDate   = input.endDate   ? new Date(input.endDate)   : new Date(input.year, 11, 31)
 
   try {
     const existing = await prisma.keyResult.findMany({

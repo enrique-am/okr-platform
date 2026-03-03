@@ -370,8 +370,14 @@ export async function sendFeedbackEmail(to: string, data: FeedbackEmailData) {
   const isBug = data.type === "BUG"
   const emoji = isBug ? "🐛" : "💡"
   const typeLabel = isBug ? "Reporte de error" : "Sugerencia de mejora"
+  let pagePath = data.pageUrl
+  try {
+    pagePath = new URL(data.pageUrl).pathname
+  } catch {
+    // pageUrl is not a valid absolute URL — use it as-is
+  }
   const subject = isBug
-    ? `🐛 Nuevo reporte de error — ${new URL(data.pageUrl).pathname}`
+    ? `🐛 Nuevo reporte de error — ${pagePath}`
     : `💡 Nueva sugerencia — ${data.title ?? "sin título"}`
 
   const ts = new Date(data.createdAt).toLocaleString("es-MX", {

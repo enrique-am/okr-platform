@@ -38,6 +38,8 @@ interface KRState extends EditCompanyKRInput {
 interface InitialData {
   title: string
   year: number
+  startDate: string
+  endDate: string
   ownerId: string | null
   objectiveStatus: ObjectiveStatus
   keyResults: EditCompanyKRInput[]
@@ -64,6 +66,10 @@ const OBJECTIVE_STATUS_OPTIONS = [
 ] as const
 
 const CURRENT_YEAR = new Date().getFullYear()
+
+function defaultDates(year: number) {
+  return { startDate: `${year}-01-01`, endDate: `${year}-12-31` }
+}
 
 function makeKRState(kr: EditCompanyKRInput): KRState {
   return { ...kr, _id: kr.id ?? Math.random().toString(36).slice(2) }
@@ -95,8 +101,17 @@ export function EditCompanyObjectiveForm({
 
   const [title,           setTitle]           = useState(initialData.title)
   const [year,            setYear]            = useState(initialData.year)
+  const [startDate,       setStartDate]       = useState(initialData.startDate)
+  const [endDate,         setEndDate]         = useState(initialData.endDate)
   const [ownerId,         setOwnerId]         = useState(initialData.ownerId ?? "")
   const [objectiveStatus, setObjectiveStatus] = useState<ObjectiveStatus>(initialData.objectiveStatus)
+
+  function handleYearChange(newYear: number) {
+    setYear(newYear)
+    const d = defaultDates(newYear)
+    setStartDate(d.startDate)
+    setEndDate(d.endDate)
+  }
   const [krs,             setKRs]             = useState<KRState[]>(
     initialData.keyResults.length > 0 ? initialData.keyResults.map(makeKRState) : [emptyKR()]
   )
@@ -141,11 +156,18 @@ export function EditCompanyObjectiveForm({
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setError(null)
+    const badKR = krs.find((kr) => kr.type !== "BOOLEAN" && kr.targetValue <= 0)
+    if (badKR) {
+      setError("El valor objetivo debe ser mayor que 0")
+      return
+    }
     startTransition(async () => {
       const result = await updateCompanyObjective({
         objectiveId,
         title,
         year,
+        startDate,
+        endDate,
         ownerId: ownerId || null,
         objectiveStatus: objectiveStatus as import("@prisma/client").ObjectiveStatus,
         keyResults: krs.map(({ _id, ...rest }) => rest),
@@ -190,7 +212,7 @@ export function EditCompanyObjectiveForm({
             <label className="block text-sm font-medium text-gray-700 mb-1">Año</label>
             <select
               value={year}
-              onChange={(e) => setYear(Number(e.target.value))}
+              onChange={(e) => handleYearChange(Number(e.target.value))}
               className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent"
             >
               {[CURRENT_YEAR - 1, CURRENT_YEAR, CURRENT_YEAR + 1].map((y) => (
@@ -212,6 +234,34 @@ export function EditCompanyObjectiveForm({
                 </option>
               ))}
             </select>
+          </div>
+        </div>
+
+        {/* Custom date range */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Fecha inicio
+              <span className="text-gray-400 font-normal ml-1">(opcional)</span>
+            </label>
+            <input
+              type="date"
+              value={startDate}
+              onChange={(e) => setStartDate(e.target.value)}
+              className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Fecha fin
+              <span className="text-gray-400 font-normal ml-1">(opcional)</span>
+            </label>
+            <input
+              type="date"
+              value={endDate}
+              onChange={(e) => setEndDate(e.target.value)}
+              className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent"
+            />
           </div>
         </div>
 
@@ -375,14 +425,21 @@ function KRCard({
       {!isBoolean && (
         <div className="grid grid-cols-3 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Valor objetivo</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Valor objetivo <span className="text-red-400">*</span>
+            </label>
             <input
               type="number"
               value={kr.targetValue}
               onChange={(e) => onChange({ targetValue: Number(e.target.value) })}
-              min={0}
-              className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent"
+              min={1}
+              className={`w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent ${
+                kr.targetValue <= 0 ? "border-red-300 bg-red-50" : "border-gray-200"
+              }`}
             />
+            {kr.targetValue <= 0 && (
+              <p className="text-xs text-red-500 mt-1">Debe ser mayor que 0</p>
+            )}
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Valor actual</label>

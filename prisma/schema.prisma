@@ -122,6 +122,9 @@ model Objective {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  @@index([teamId])
+  @@index([status])
 }
 
 model KeyResult {
@@ -141,6 +144,8 @@ model KeyResult {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  @@index([objectiveId])
 }
 
 model CheckIn {

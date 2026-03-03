@@ -10,6 +10,9 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "No autorizado" }, { status: 401 })
   }
 
+  // Date math runs in UTC on the server. Configure Railway to run this job at
+  // 14:00 UTC daily, which equals 08:00 CST (UTC-6) or 09:00 CDT (UTC-5) in
+  // Mexico City time, depending on daylight-saving season.
   const now = new Date()
 
   // Target window: objectives whose endDate is between 7 and 8 days from now.
