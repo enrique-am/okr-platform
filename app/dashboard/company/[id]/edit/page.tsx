@@ -19,7 +19,12 @@ export default async function EditCompanyObjectivePage({
   const [objective, leads] = await Promise.all([
     prisma.objective.findUnique({
       where: { id: params.id },
-      include: { keyResults: { orderBy: { createdAt: "asc" } } },
+      include: {
+        keyResults: {
+          orderBy: { createdAt: "asc" },
+          include: { dataSource: true },
+        },
+      },
     }),
     prisma.user.findMany({
       where: { role: { in: ["LEAD", "EXECUTIVE"] }, status: "ACTIVE" },
@@ -60,6 +65,9 @@ export default async function EditCompanyObjectivePage({
       unit: kr.unit ?? "",
       description: kr.description ?? "",
       trackingStatus: kr.trackingStatus,
+      dataSource: kr.dataSource
+        ? { name: kr.dataSource.name, url: kr.dataSource.url, instructions: kr.dataSource.instructions }
+        : null,
     })),
   }
 

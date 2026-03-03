@@ -7,6 +7,8 @@ import type { EditCompanyKRInput } from "./actions"
 import { AiSuggestButton } from "@/components/ai/suggest-button"
 import { SuggestKRsButton } from "@/components/ai/suggest-krs-button"
 import type { KRSuggestion } from "@/components/ai/suggest-krs-button"
+import { DataSourceSection } from "@/components/kr/data-source-section"
+import type { DataSourceValue } from "@/components/kr/data-source-section"
 
 const KeyResultType = {
   PERCENTAGE: "PERCENTAGE",
@@ -33,6 +35,7 @@ interface Lead {
 
 interface KRState extends EditCompanyKRInput {
   _id: string
+  dataSource: DataSourceValue
 }
 
 interface InitialData {
@@ -72,7 +75,15 @@ function defaultDates(year: number) {
 }
 
 function makeKRState(kr: EditCompanyKRInput): KRState {
-  return { ...kr, _id: kr.id ?? Math.random().toString(36).slice(2) }
+  return {
+    ...kr,
+    _id: kr.id ?? Math.random().toString(36).slice(2),
+    dataSource: {
+      name: kr.dataSource?.name ?? "",
+      url: kr.dataSource?.url ?? "",
+      instructions: kr.dataSource?.instructions ?? "",
+    },
+  }
 }
 
 function emptyKR(): KRState {
@@ -80,6 +91,7 @@ function emptyKR(): KRState {
     _id: Math.random().toString(36).slice(2),
     title: "", type: "PERCENTAGE", targetValue: 100, currentValue: 0,
     unit: "%", description: "", trackingStatus: "ON_TRACK",
+    dataSource: { name: "", url: "", instructions: "" },
   }
 }
 
@@ -149,6 +161,7 @@ export function EditCompanyObjectiveForm({
         unit: suggestion.unit,
         description: "",
         trackingStatus: "ON_TRACK",
+        dataSource: { name: "", url: "", instructions: "" },
       },
     ])
   }
@@ -170,7 +183,12 @@ export function EditCompanyObjectiveForm({
         endDate,
         ownerId: ownerId || null,
         objectiveStatus: objectiveStatus as import("@prisma/client").ObjectiveStatus,
-        keyResults: krs.map(({ _id, ...rest }) => rest),
+        keyResults: krs.map(({ _id, dataSource, ...rest }) => ({
+          ...rest,
+          dataSource: dataSource.name.trim()
+            ? { name: dataSource.name.trim(), url: dataSource.url.trim() || null, instructions: dataSource.instructions.trim() || null }
+            : null,
+        })),
       })
       if (!result.success) { setError(result.error); return }
       router.push("/dashboard/company")
@@ -472,6 +490,12 @@ function KRCard({
           className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent resize-none"
         />
       </div>
+
+      {/* Data source */}
+      <DataSourceSection
+        value={kr.dataSource}
+        onChange={(patch) => onChange({ dataSource: { ...kr.dataSource, ...patch } })}
+      />
     </div>
   )
 }

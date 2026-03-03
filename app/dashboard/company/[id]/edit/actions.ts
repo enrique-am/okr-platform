@@ -9,6 +9,12 @@ import { canManageCompanyObjective } from "@/lib/permissions"
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
+export interface DataSourceInput {
+  name: string
+  url: string | null
+  instructions: string | null
+}
+
 export interface EditCompanyKRInput {
   id?: string
   title: string
@@ -18,6 +24,7 @@ export interface EditCompanyKRInput {
   unit: string
   description: string
   trackingStatus: TrackingStatus
+  dataSource: DataSourceInput | null
 }
 
 export interface UpdateCompanyObjectiveInput {
@@ -90,9 +97,11 @@ export async function updateCompanyObjective(
           ownerId: input.ownerId || null,
         },
       }),
+      // Delete removed KRs (DataSource cascades automatically)
       ...(idsToDelete.length > 0
         ? [prisma.keyResult.deleteMany({ where: { id: { in: idsToDelete } } })]
         : []),
+      // Update existing KRs
       ...input.keyResults
         .filter((kr) => kr.id)
         .map((kr) =>
@@ -109,10 +118,38 @@ export async function updateCompanyObjective(
             },
           })
         ),
+      // Upsert or delete DataSource for existing KRs
+      ...input.keyResults
+        .filter((kr) => kr.id)
+        .map((kr) => {
+          const ds = kr.dataSource
+          const hasDS = ds && ds.name.trim()
+          if (hasDS) {
+            return prisma.dataSource.upsert({
+              where: { keyResultId: kr.id! },
+              create: {
+                keyResultId: kr.id!,
+                name: ds!.name.trim(),
+                url: ds!.url?.trim() || null,
+                instructions: ds!.instructions?.trim() || null,
+              },
+              update: {
+                name: ds!.name.trim(),
+                url: ds!.url?.trim() || null,
+                instructions: ds!.instructions?.trim() || null,
+              },
+            })
+          } else {
+            return prisma.dataSource.deleteMany({ where: { keyResultId: kr.id! } })
+          }
+        }),
+      // Create new KRs (with optional DataSource)
       ...input.keyResults
         .filter((kr) => !kr.id)
-        .map((kr) =>
-          prisma.keyResult.create({
+        .map((kr) => {
+          const ds = kr.dataSource
+          const hasDS = ds && ds.name.trim()
+          return prisma.keyResult.create({
             data: {
               title: kr.title.trim(),
               type: kr.type,
@@ -122,9 +159,18 @@ export async function updateCompanyObjective(
               description: kr.description.trim() || null,
               trackingStatus: kr.trackingStatus,
               objectiveId: input.objectiveId,
+              ...(hasDS ? {
+                dataSource: {
+                  create: {
+                    name: ds!.name.trim(),
+                    url: ds!.url?.trim() || null,
+                    instructions: ds!.instructions?.trim() || null,
+                  },
+                },
+              } : {}),
             },
           })
-        ),
+        }),
     ])
 
     revalidatePath("/dashboard/company")

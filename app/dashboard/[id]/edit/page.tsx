@@ -26,7 +26,10 @@ export default async function EditObjectivePage({
     prisma.objective.findUnique({
       where: { id: params.id },
       include: {
-        keyResults: { orderBy: { createdAt: "asc" } },
+        keyResults: {
+          orderBy: { createdAt: "asc" },
+          include: { dataSource: true },
+        },
         team: { select: { name: true, slug: true } },
       },
     }),
@@ -77,6 +80,9 @@ export default async function EditObjectivePage({
       unit: kr.unit ?? "",
       description: kr.description ?? "",
       trackingStatus: kr.trackingStatus,
+      dataSource: kr.dataSource
+        ? { name: kr.dataSource.name, url: kr.dataSource.url, instructions: kr.dataSource.instructions }
+        : null,
     })),
   }
 

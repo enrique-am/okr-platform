@@ -10,6 +10,12 @@ import { canManageCompanyObjective } from "@/lib/permissions"
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
+export interface DataSourceInput {
+  name: string
+  url: string | null
+  instructions: string | null
+}
+
 export interface CompanyKRInput {
   title: string
   type: KeyResultType
@@ -17,6 +23,7 @@ export interface CompanyKRInput {
   unit: string
   description: string
   trackingStatus: TrackingStatus
+  dataSource: DataSourceInput | null
 }
 
 export interface CreateCompanyObjectiveInput {
@@ -70,15 +77,28 @@ export async function createCompanyObjective(
         endDate,
         ownerId: input.ownerId || null,
         keyResults: {
-          create: input.keyResults.map((kr) => ({
-            title: kr.title.trim(),
-            type: kr.type,
-            targetValue: kr.type === KeyResultType.BOOLEAN ? 1 : kr.targetValue,
-            currentValue: 0,
-            unit: kr.unit.trim() || null,
-            description: kr.description.trim() || null,
-            trackingStatus: TrackingStatus.ON_TRACK,
-          })),
+          create: input.keyResults.map((kr) => {
+            const ds = kr.dataSource
+            const hasDS = ds && ds.name.trim()
+            return {
+              title: kr.title.trim(),
+              type: kr.type,
+              targetValue: kr.type === KeyResultType.BOOLEAN ? 1 : kr.targetValue,
+              currentValue: 0,
+              unit: kr.unit.trim() || null,
+              description: kr.description.trim() || null,
+              trackingStatus: TrackingStatus.ON_TRACK,
+              ...(hasDS ? {
+                dataSource: {
+                  create: {
+                    name: ds!.name.trim(),
+                    url: ds!.url?.trim() || null,
+                    instructions: ds!.instructions?.trim() || null,
+                  },
+                },
+              } : {}),
+            }
+          }),
         },
       },
     })

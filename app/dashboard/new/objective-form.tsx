@@ -7,6 +7,8 @@ import type { KRInput } from "./actions"
 import { AiSuggestButton } from "@/components/ai/suggest-button"
 import { SuggestKRsButton } from "@/components/ai/suggest-krs-button"
 import type { KRSuggestion } from "@/components/ai/suggest-krs-button"
+import { DataSourceSection } from "@/components/kr/data-source-section"
+import type { DataSourceValue } from "@/components/kr/data-source-section"
 
 // Local mirrors of the Prisma enums — @prisma/client is server-only and cannot
 // be imported from client components (it's in serverComponentsExternalPackages).
@@ -34,6 +36,7 @@ interface Team {
 
 interface KRState extends KRInput {
   _id: string // local key only
+  dataSource: DataSourceValue
 }
 
 const EMPTY_KR = (): KRState => ({
@@ -44,6 +47,7 @@ const EMPTY_KR = (): KRState => ({
   unit: "%",
   description: "",
   trackingStatus: TrackingStatus.ON_TRACK,
+  dataSource: { name: "", url: "", instructions: "" },
 })
 
 // ─── Label maps ───────────────────────────────────────────────────────────────
@@ -117,6 +121,7 @@ export function ObjectiveForm({ teams }: { teams: Team[] }) {
         unit: suggestion.unit,
         description: "",
         trackingStatus: TrackingStatus.ON_TRACK,
+        dataSource: { name: "", url: "", instructions: "" },
       },
     ])
   }
@@ -141,7 +146,12 @@ export function ObjectiveForm({ teams }: { teams: Team[] }) {
         teamId,
         quarter,
         year,
-        keyResults: krs.map(({ _id, ...rest }) => rest),
+        keyResults: krs.map(({ _id, dataSource, ...rest }) => ({
+          ...rest,
+          dataSource: dataSource.name.trim()
+            ? { name: dataSource.name.trim(), url: dataSource.url.trim() || null, instructions: dataSource.instructions.trim() || null }
+            : null,
+        })),
       })
 
       if (!result.success) {
@@ -313,6 +323,7 @@ function KRCard({ index, kr, teamName, parentObjective, canRemove, onChange, onR
 
   return (
     <div className="bg-white rounded-2xl border border-gray-100 shadow-sm px-6 py-5 space-y-4">
+
       {/* Header */}
       <div className="flex items-center justify-between">
         <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">
@@ -439,6 +450,12 @@ function KRCard({ index, kr, teamName, parentObjective, canRemove, onChange, onR
           className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent resize-none"
         />
       </div>
+
+      {/* Data source */}
+      <DataSourceSection
+        value={kr.dataSource}
+        onChange={(patch) => onChange({ dataSource: { ...kr.dataSource, ...patch } })}
+      />
     </div>
   )
 }

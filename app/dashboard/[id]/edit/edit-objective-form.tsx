@@ -7,6 +7,8 @@ import type { EditKRInput } from "./actions"
 import { AiSuggestButton } from "@/components/ai/suggest-button"
 import { SuggestKRsButton } from "@/components/ai/suggest-krs-button"
 import type { KRSuggestion } from "@/components/ai/suggest-krs-button"
+import { DataSourceSection } from "@/components/kr/data-source-section"
+import type { DataSourceValue } from "@/components/kr/data-source-section"
 
 // Local mirrors of the Prisma enums (client components cannot import @prisma/client)
 const KeyResultType = {
@@ -40,6 +42,7 @@ interface Team {
 
 interface KRState extends EditKRInput {
   _id: string // local React key
+  dataSource: DataSourceValue
 }
 
 interface InitialData {
@@ -100,7 +103,15 @@ const OBJECTIVE_STATUS_OPTIONS: {
 ]
 
 function makeKRState(kr: EditKRInput): KRState {
-  return { ...kr, _id: kr.id ?? Math.random().toString(36).slice(2) }
+  return {
+    ...kr,
+    _id: kr.id ?? Math.random().toString(36).slice(2),
+    dataSource: {
+      name: kr.dataSource?.name ?? "",
+      url: kr.dataSource?.url ?? "",
+      instructions: kr.dataSource?.instructions ?? "",
+    },
+  }
 }
 
 function emptyKR(): KRState {
@@ -113,6 +124,7 @@ function emptyKR(): KRState {
     unit: "%",
     description: "",
     trackingStatus: TrackingStatus.ON_TRACK,
+    dataSource: { name: "", url: "", instructions: "" },
   }
 }
 
@@ -180,6 +192,7 @@ export function EditObjectiveForm({
         unit: suggestion.unit,
         description: "",
         trackingStatus: TrackingStatus.ON_TRACK,
+        dataSource: { name: "", url: "", instructions: "" },
       },
     ])
   }
@@ -206,8 +219,12 @@ export function EditObjectiveForm({
         quarter,
         year,
         objectiveStatus,
-        // Strip the local _id, keep everything else (including optional db id)
-        keyResults: krs.map(({ _id, ...rest }) => rest),
+        keyResults: krs.map(({ _id, dataSource, ...rest }) => ({
+          ...rest,
+          dataSource: dataSource.name.trim()
+            ? { name: dataSource.name.trim(), url: dataSource.url.trim() || null, instructions: dataSource.instructions.trim() || null }
+            : null,
+        })),
       })
 
       if (!result.success) {
@@ -403,6 +420,7 @@ interface KRCardProps {
   onRemove: () => void
 }
 
+
 function KRCard({ index, objectiveNumber, kr, teamName, parentObjective, canRemove, onChange, onRemove }: KRCardProps) {
   const krLabel =
     objectiveNumber != null
@@ -549,6 +567,12 @@ function KRCard({ index, objectiveNumber, kr, teamName, parentObjective, canRemo
           className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent resize-none"
         />
       </div>
+
+      {/* Data source */}
+      <DataSourceSection
+        value={kr.dataSource}
+        onChange={(patch) => onChange({ dataSource: { ...kr.dataSource, ...patch } })}
+      />
     </div>
   )
 }

@@ -7,6 +7,8 @@ import type { CompanyKRInput } from "./actions"
 import { AiSuggestButton } from "@/components/ai/suggest-button"
 import { SuggestKRsButton } from "@/components/ai/suggest-krs-button"
 import type { KRSuggestion } from "@/components/ai/suggest-krs-button"
+import { DataSourceSection } from "@/components/kr/data-source-section"
+import type { DataSourceValue } from "@/components/kr/data-source-section"
 
 // Local mirrors of Prisma enums (client components cannot import @prisma/client)
 const KeyResultType = {
@@ -27,6 +29,7 @@ interface Lead {
 
 interface KRState extends CompanyKRInput {
   _id: string
+  dataSource: DataSourceValue
 }
 
 const KR_TYPE_LABELS: Record<KeyResultType, string> = {
@@ -61,6 +64,7 @@ function emptyKR(): KRState {
     unit: "%",
     description: "",
     trackingStatus: "ON_TRACK",
+    dataSource: { name: "", url: "", instructions: "" },
   }
 }
 
@@ -116,6 +120,7 @@ export function CompanyObjectiveForm({ leads }: { leads: Lead[] }) {
         unit: suggestion.unit,
         description: "",
         trackingStatus: "ON_TRACK",
+        dataSource: { name: "", url: "", instructions: "" },
       },
     ])
   }
@@ -136,7 +141,12 @@ export function CompanyObjectiveForm({ leads }: { leads: Lead[] }) {
         startDate,
         endDate,
         ownerId: ownerId || null,
-        keyResults: krs.map(({ _id, ...rest }) => rest),
+        keyResults: krs.map(({ _id, dataSource, ...rest }) => ({
+          ...rest,
+          dataSource: dataSource.name.trim()
+            ? { name: dataSource.name.trim(), url: dataSource.url.trim() || null, instructions: dataSource.instructions.trim() || null }
+            : null,
+        })),
       })
       if (!result.success) { setError(result.error); return }
       router.push("/dashboard/company")
@@ -329,7 +339,8 @@ function KRCard({
   onChange: (patch: Partial<KRState>) => void
   onRemove: () => void
   onAiSuggest: (suggestion: string) => void
-}) {
+})
+ {
   const isBoolean = kr.type === "BOOLEAN"
 
   return (
@@ -427,6 +438,12 @@ function KRCard({
           className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent resize-none"
         />
       </div>
+
+      {/* Data source */}
+      <DataSourceSection
+        value={kr.dataSource}
+        onChange={(patch) => onChange({ dataSource: { ...kr.dataSource, ...patch } })}
+      />
     </div>
   )
 }

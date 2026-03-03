@@ -24,6 +24,11 @@ export interface KRItem {
   targetValue: number
   unit: string | null
   krNumber: number
+  dataSource: {
+    name: string
+    url: string | null
+    instructions: string | null
+  } | null
 }
 
 export interface ObjectiveGroup {
@@ -258,6 +263,49 @@ export function CheckInForm({
                           {progress}%
                         </span>
                       </div>
+
+                      {/* Data source */}
+                      {kr.dataSource && (
+                        <div className="rounded-xl border border-brand-200 bg-brand-50 px-3 py-3 space-y-2">
+                          <div className="flex items-center justify-between gap-2">
+                            <p className="text-xs font-semibold text-brand-800">
+                              {kr.dataSource.name}
+                            </p>
+                            {kr.dataSource.url && (
+                              <a
+                                href={kr.dataSource.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-brand-500 hover:bg-brand-600 text-white text-xs font-semibold transition-colors flex-shrink-0"
+                              >
+                                <svg
+                                  xmlns="http://www.w3.org/2000/svg"
+                                  viewBox="0 0 16 16"
+                                  fill="currentColor"
+                                  className="w-3 h-3"
+                                >
+                                  <path
+                                    fillRule="evenodd"
+                                    d="M8.914 6.025a.75.75 0 0 1 1.06 0 3.5 3.5 0 0 1 0 4.95l-2 2a3.5 3.5 0 0 1-4.95-4.95l1.5-1.5a.75.75 0 0 1 1.06 1.06l-1.5 1.5a2 2 0 0 0 2.83 2.83l2-2a2 2 0 0 0 0-2.83.75.75 0 0 1 0-1.06Z"
+                                    clipRule="evenodd"
+                                  />
+                                  <path
+                                    fillRule="evenodd"
+                                    d="M7.086 9.975a.75.75 0 0 1-1.06 0 3.5 3.5 0 0 1 0-4.95l2-2a3.5 3.5 0 0 1 4.95 4.95l-1.5 1.5a.75.75 0 0 1-1.06-1.06l1.5-1.5a2 2 0 0 0-2.83-2.83l-2 2a2 2 0 0 0 0 2.83.75.75 0 0 1 0 1.06Z"
+                                    clipRule="evenodd"
+                                  />
+                                </svg>
+                                Abrir fuente
+                              </a>
+                            )}
+                          </div>
+                          {kr.dataSource.instructions && (
+                            <p className="text-xs text-brand-700 leading-relaxed">
+                              {kr.dataSource.instructions}
+                            </p>
+                          )}
+                        </div>
+                      )}
 
                       {/* Value input */}
                       <div>

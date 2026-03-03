@@ -10,6 +10,12 @@ import { canCreateObjective } from "@/lib/permissions"
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
+export interface DataSourceInput {
+  name: string
+  url: string | null
+  instructions: string | null
+}
+
 export interface KRInput {
   title: string
   type: KeyResultType
@@ -17,6 +23,7 @@ export interface KRInput {
   unit: string
   description: string
   trackingStatus: TrackingStatus
+  dataSource: DataSourceInput | null
 }
 
 export interface CreateObjectiveInput {
@@ -101,15 +108,28 @@ export async function createObjective(
         ownerId: session.user.id,
         teamId: input.teamId,
         keyResults: {
-          create: input.keyResults.map((kr) => ({
-            title: kr.title.trim(),
-            type: kr.type,
-            targetValue: kr.type === KeyResultType.BOOLEAN ? 1 : kr.targetValue,
-            currentValue: 0,
-            unit: kr.unit.trim() || null,
-            description: kr.description.trim() || null,
-            trackingStatus: kr.trackingStatus,
-          })),
+          create: input.keyResults.map((kr) => {
+            const ds = kr.dataSource
+            const hasDS = ds && ds.name.trim()
+            return {
+              title: kr.title.trim(),
+              type: kr.type,
+              targetValue: kr.type === KeyResultType.BOOLEAN ? 1 : kr.targetValue,
+              currentValue: 0,
+              unit: kr.unit.trim() || null,
+              description: kr.description.trim() || null,
+              trackingStatus: kr.trackingStatus,
+              ...(hasDS ? {
+                dataSource: {
+                  create: {
+                    name: ds!.name.trim(),
+                    url: ds!.url?.trim() || null,
+                    instructions: ds!.instructions?.trim() || null,
+                  },
+                },
+              } : {}),
+            }
+          }),
         },
       },
     })

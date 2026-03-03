@@ -9,6 +9,7 @@ import type { Metadata } from "next"
 import { canEditObjective, canSubmitCheckin } from "@/lib/permissions"
 import { calcKRProgress, progressToTrafficLight, avgProgress } from "@/lib/progress"
 import { KRChangelogAccordion } from "./kr-changelog-accordion"
+import { DataSourceBadge } from "@/components/kr/data-source-badge"
 
 // ─── Metadata ─────────────────────────────────────────────────────────────────
 
@@ -114,6 +115,9 @@ export default async function TeamPage({ params }: { params: { slug: string } })
                 orderBy: { createdAt: "desc" },
                 take: 3,
                 include: { author: { select: { name: true } } },
+              },
+              dataSource: {
+                select: { name: true, url: true, instructions: true },
               },
             },
           },
@@ -306,12 +310,17 @@ export default async function TeamPage({ params }: { params: { slug: string } })
                                 {kr.title}
                               </p>
                             </div>
-                            <span
-                              className={`flex-shrink-0 inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium ${krCfg.badge}`}
-                            >
-                              <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${krCfg.dot}`} />
-                              {krCfg.label}
-                            </span>
+                            <div className="flex items-center gap-2 flex-shrink-0">
+                              {kr.dataSource && (
+                                <DataSourceBadge dataSource={kr.dataSource} />
+                              )}
+                              <span
+                                className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium ${krCfg.badge}`}
+                              >
+                                <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${krCfg.dot}`} />
+                                {krCfg.label}
+                              </span>
+                            </div>
                           </div>
 
                           {/* Progress bar */}
