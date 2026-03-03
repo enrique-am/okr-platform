@@ -46,7 +46,7 @@ export default async function CompanyPage() {
   // Build enriched objectives with computed progress
   const objectives = rawObjectives.map((obj, globalIdx) => {
     const krs = obj.keyResults.map((kr, krIdx) => {
-      const progress = calcKRProgress(kr.type, kr.currentValue, kr.targetValue)
+      const progress = calcKRProgress(kr.type, kr.currentValue, kr.targetValue, kr.startValue)
       return { ...kr, number: krIdx + 1, progress }
     })
     const objProgress = krs.length > 0

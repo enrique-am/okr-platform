@@ -76,6 +76,7 @@ export default async function EditObjectivePage({
       title: kr.title,
       type: kr.type,
       targetValue: kr.targetValue,
+      startValue: kr.startValue,
       currentValue: kr.currentValue,
       unit: kr.unit ?? "",
       description: kr.description ?? "",

@@ -42,6 +42,7 @@ export default async function CheckInPage({ params }: { params: { slug: string }
               type: true,
               currentValue: true,
               targetValue: true,
+              startValue: true,
               unit: true,
               dataSource: {
                 select: { name: true, url: true, instructions: true },
@@ -74,6 +75,7 @@ export default async function CheckInPage({ params }: { params: { slug: string }
       type: kr.type,
       currentValue: kr.currentValue,
       targetValue: kr.targetValue,
+      startValue: kr.startValue,
       unit: kr.unit,
       krNumber: krIdx + 1,
       dataSource: kr.dataSource ?? null,

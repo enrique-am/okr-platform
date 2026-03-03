@@ -36,6 +36,7 @@ export default async function DashboardPage() {
               type: true,
               currentValue: true,
               targetValue: true,
+              startValue: true,
               unit: true,
               trackingStatus: true,
               description: true,
@@ -56,7 +57,7 @@ export default async function DashboardPage() {
       lead: team.members[0]?.name ?? "Sin líder asignado",
       objectives: team.objectives.map((obj, objIdx) => {
         const krs = obj.keyResults.map((kr, krIdx) => {
-          const progress = calcKRProgress(kr.type, kr.currentValue, kr.targetValue)
+          const progress = calcKRProgress(kr.type, kr.currentValue, kr.targetValue, kr.startValue)
           return {
             id: kr.id,
             number: krIdx + 1,

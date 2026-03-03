@@ -20,6 +20,7 @@ export interface CompanyKRInput {
   title: string
   type: KeyResultType
   targetValue: number
+  startValue: number | null
   unit: string
   description: string
   trackingStatus: TrackingStatus
@@ -84,6 +85,7 @@ export async function createCompanyObjective(
               title: kr.title.trim(),
               type: kr.type,
               targetValue: kr.type === KeyResultType.BOOLEAN ? 1 : kr.targetValue,
+              startValue: kr.type === KeyResultType.BOOLEAN ? null : (kr.startValue ?? null),
               currentValue: 0,
               unit: kr.unit.trim() || null,
               description: kr.description.trim() || null,

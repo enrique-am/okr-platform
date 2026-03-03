@@ -89,7 +89,7 @@ function makeKRState(kr: EditCompanyKRInput): KRState {
 function emptyKR(): KRState {
   return {
     _id: Math.random().toString(36).slice(2),
-    title: "", type: "PERCENTAGE", targetValue: 100, currentValue: 0,
+    title: "", type: "PERCENTAGE", targetValue: 100, startValue: null, currentValue: 0,
     unit: "%", description: "", trackingStatus: "ON_TRACK",
     dataSource: { name: "", url: "", instructions: "" },
   }
@@ -157,6 +157,7 @@ export function EditCompanyObjectiveForm({
         title: suggestion.title,
         type: suggestion.type as KeyResultType,
         targetValue: suggestion.type === "BOOLEAN" ? 1 : suggestion.targetValue,
+        startValue: null,
         currentValue: 0,
         unit: suggestion.unit,
         description: "",
@@ -183,8 +184,9 @@ export function EditCompanyObjectiveForm({
         endDate,
         ownerId: ownerId || null,
         objectiveStatus: objectiveStatus as import("@prisma/client").ObjectiveStatus,
-        keyResults: krs.map(({ _id, dataSource, ...rest }) => ({
+        keyResults: krs.map(({ _id, dataSource, startValue, ...rest }) => ({
           ...rest,
+          startValue: startValue,
           dataSource: dataSource.name.trim()
             ? { name: dataSource.name.trim(), url: dataSource.url.trim() || null, instructions: dataSource.instructions.trim() || null }
             : null,
@@ -439,6 +441,28 @@ function KRCard({
           ))}
         </div>
       </div>
+
+      {!isBoolean && (
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Valor inicial{" "}
+            <span className="font-normal text-gray-400">(opcional)</span>
+          </label>
+          <input
+            type="number"
+            value={kr.startValue ?? ""}
+            onChange={(e) =>
+              onChange({ startValue: e.target.value === "" ? null : Number(e.target.value) })
+            }
+            placeholder="p.ej. 60"
+            step={kr.type === "CURRENCY" ? 1000 : 1}
+            className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent"
+          />
+          <p className="text-xs text-gray-400 mt-1">
+            Valor de la métrica antes de iniciar el trimestre.
+          </p>
+        </div>
+      )}
 
       {!isBoolean && (
         <div className="grid grid-cols-3 gap-4">

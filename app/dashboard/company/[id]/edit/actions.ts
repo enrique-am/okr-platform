@@ -20,6 +20,7 @@ export interface EditCompanyKRInput {
   title: string
   type: KeyResultType
   targetValue: number
+  startValue: number | null
   currentValue: number
   unit: string
   description: string
@@ -111,6 +112,7 @@ export async function updateCompanyObjective(
               title: kr.title.trim(),
               type: kr.type,
               targetValue: kr.type === KeyResultType.BOOLEAN ? 1 : kr.targetValue,
+              startValue: kr.type === KeyResultType.BOOLEAN ? null : (kr.startValue ?? null),
               currentValue: kr.currentValue,
               unit: kr.unit.trim() || null,
               description: kr.description.trim() || null,
@@ -154,6 +156,7 @@ export async function updateCompanyObjective(
               title: kr.title.trim(),
               type: kr.type,
               targetValue: kr.type === KeyResultType.BOOLEAN ? 1 : kr.targetValue,
+              startValue: kr.type === KeyResultType.BOOLEAN ? null : (kr.startValue ?? null),
               currentValue: kr.currentValue,
               unit: kr.unit.trim() || null,
               description: kr.description.trim() || null,

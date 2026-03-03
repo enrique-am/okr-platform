@@ -142,7 +142,7 @@ export default async function TeamPage({ params }: { params: { slug: string } })
   const teamProgress = avgProgress(
     team.objectives.map((obj) =>
       avgProgress(
-        obj.keyResults.map((kr) => calcKRProgress(kr.type, kr.currentValue, kr.targetValue))
+        obj.keyResults.map((kr) => calcKRProgress(kr.type, kr.currentValue, kr.targetValue, kr.startValue))
       )
     )
   )
@@ -221,7 +221,7 @@ export default async function TeamPage({ params }: { params: { slug: string } })
             const krsWithProgress = obj.keyResults.map((kr, krIdx) => ({
               ...kr,
               number: krIdx + 1,
-              progress: calcKRProgress(kr.type, kr.currentValue, kr.targetValue),
+              progress: calcKRProgress(kr.type, kr.currentValue, kr.targetValue, kr.startValue),
             }))
 
             const objProgress =
@@ -337,14 +337,20 @@ export default async function TeamPage({ params }: { params: { slug: string } })
                           </div>
 
                           {/* Meta row */}
-                          <div className="flex items-center gap-2 text-xs text-gray-400 mb-3">
+                          <div className="flex items-center gap-2 text-xs text-gray-400 mb-3 flex-wrap">
                             <span className="font-medium text-gray-500">
                               {KR_TYPE_LABELS[kr.type]}
                             </span>
                             <span>·</span>
+                            {kr.startValue != null && kr.type !== "BOOLEAN" && (
+                              <>
+                                <span>Inicio: {kr.startValue}{kr.unit ? ` ${kr.unit}` : ""}</span>
+                                <span>·</span>
+                              </>
+                            )}
                             <span>Actual: {valueStr.split(" / ")[0]}</span>
                             <span>·</span>
-                            <span>Objetivo: {valueStr.split(" / ")[1]}</span>
+                            <span>Meta: {valueStr.split(" / ")[1]}</span>
                           </div>
 
                           {kr.description && (

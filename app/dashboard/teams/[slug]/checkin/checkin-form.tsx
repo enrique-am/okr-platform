@@ -22,6 +22,7 @@ export interface KRItem {
   type: KRType
   currentValue: number
   targetValue: number
+  startValue: number | null
   unit: string | null
   krNumber: number
   dataSource: {
@@ -45,8 +46,11 @@ interface EntryState {
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
-function calcProgress(type: KRType, current: number, target: number): number {
+function calcProgress(type: KRType, current: number, target: number, startValue?: number | null): number {
   if (type === KRType.BOOLEAN) return current > 0 ? 100 : 0
+  if (startValue != null && target !== startValue) {
+    return Math.min(100, Math.max(0, Math.round(((current - startValue) / (target - startValue)) * 100)))
+  }
   return target > 0 ? Math.min(100, Math.round((current / target) * 100)) : 0
 }
 
@@ -221,7 +225,7 @@ export function CheckInForm({
               <div className="space-y-3">
                 {group.krs.map((kr) => {
                   const entry = entries[kr.id]
-                  const progress = calcProgress(kr.type, entry.newValue, kr.targetValue)
+                  const progress = calcProgress(kr.type, entry.newValue, kr.targetValue, kr.startValue)
                   const isBoolean = kr.type === KRType.BOOLEAN
                   const changed = entry.newValue !== entry.originalValue
 
@@ -243,11 +247,20 @@ export function CheckInForm({
                       </div>
 
                       {/* Current state */}
-                      <div className="flex items-center gap-1.5 text-xs text-gray-400">
+                      <div className="flex items-center gap-1.5 text-xs text-gray-400 flex-wrap">
+                        {kr.startValue != null && kr.type !== KRType.BOOLEAN && (
+                          <>
+                            <span>Inicio:</span>
+                            <span className="font-medium text-gray-600">
+                              {kr.startValue}{kr.unit ? ` ${kr.unit}` : ""}
+                            </span>
+                            <span>→</span>
+                          </>
+                        )}
                         <span>Actual:</span>
                         <span className="font-medium text-gray-600">{formatCurrent(kr)}</span>
                         <span>·</span>
-                        <span>Objetivo:</span>
+                        <span>Meta:</span>
                         <span className="font-medium text-gray-600">{formatTarget(kr)}</span>
                       </div>
 

@@ -21,9 +21,15 @@ export function progressToOKRStatus(progress: number): OKRStatus {
 export function calcKRProgress(
   type: string,
   currentValue: number,
-  targetValue: number
+  targetValue: number,
+  startValue?: number | null
 ): number {
   if (type === "BOOLEAN") return currentValue > 0 ? 100 : 0
+  if (startValue != null && targetValue !== startValue) {
+    return Math.min(100, Math.max(0, Math.round(
+      ((currentValue - startValue) / (targetValue - startValue)) * 100
+    )))
+  }
   return targetValue > 0
     ? Math.min(100, Math.round((currentValue / targetValue) * 100))
     : 0

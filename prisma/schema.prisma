@@ -133,6 +133,7 @@ model KeyResult {
   description    String?
   type           KeyResultType  @default(PERCENTAGE)
   targetValue    Float
+  startValue     Float?
   currentValue   Float          @default(0)
   unit           String?
   trackingStatus TrackingStatus @default(ON_TRACK)
