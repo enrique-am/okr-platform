@@ -78,6 +78,7 @@ model User {
   activityLogs     ActivityLog[]
   feedbackReports  FeedbackReport[]
   ledTeams         Team[]           @relation("TeamLead")
+  notificationSettingsUpdates NotificationSettings[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -230,6 +231,32 @@ model FeedbackReport {
   @@index([read])
   @@index([userId])
   @@index([createdAt])
+}
+
+// ─── Notification Settings (singleton: id = 1) ────────────────────────────────
+
+model NotificationSettings {
+  id Int @id @default(1)
+
+  weeklyReminderEnabled  Boolean @default(true)
+  weeklyReminderDay      Int     @default(1)
+  weeklyReminderHour     Int     @default(8)
+
+  deadlineReminderEnabled Boolean @default(true)
+  deadlineReminderDays    Int     @default(7)
+
+  weeklyDigestEnabled Boolean @default(true)
+  weeklyDigestDay     Int     @default(1)
+  weeklyDigestHour    Int     @default(7)
+
+  welcomeEmailEnabled Boolean @default(true)
+
+  customReminderMessage String?
+  customDigestMessage   String?
+
+  updatedAt   DateTime @updatedAt
+  updatedById String?
+  updatedBy   User?    @relation(fields: [updatedById], references: [id], onDelete: SetNull)
 }
 
 // ─── NextAuth Required Models ─────────────────────────────────────────────────

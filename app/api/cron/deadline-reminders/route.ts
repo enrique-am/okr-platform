@@ -10,15 +10,23 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "No autorizado" }, { status: 401 })
   }
 
+  // Check notification settings
+  const settings = await prisma.notificationSettings.findFirst()
+  if (settings && !settings.deadlineReminderEnabled) {
+    return NextResponse.json({ ok: true, skipped: true, reason: "deadline_reminders_disabled" })
+  }
+  const reminderDays = settings?.deadlineReminderDays ?? 7
+  const customMessage = settings?.customReminderMessage ?? null
+
   // Date math runs in UTC on the server. Configure Railway to run this job at
   // 14:00 UTC daily, which equals 08:00 CST (UTC-6) or 09:00 CDT (UTC-5) in
   // Mexico City time, depending on daylight-saving season.
   const now = new Date()
 
-  // Target window: objectives whose endDate is between 7 and 8 days from now.
+  // Target window: objectives whose endDate is between reminderDays and reminderDays+1 from now.
   // Running this job daily means each objective gets exactly one reminder.
-  const windowStart = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000)
-  const windowEnd   = new Date(now.getTime() + 8 * 24 * 60 * 60 * 1000)
+  const windowStart = new Date(now.getTime() + reminderDays * 24 * 60 * 60 * 1000)
+  const windowEnd   = new Date(now.getTime() + (reminderDays + 1) * 24 * 60 * 60 * 1000)
 
   // Fetch teams that have objectives ending in the target window.
   // We load ALL active objectives for the team (ordered) so we can derive
@@ -83,6 +91,7 @@ export async function POST(req: NextRequest) {
             teamName: team.name,
             teamSlug: team.slug,
             daysLeft,
+            customMessage,
           })
           sent++
         } catch (err) {

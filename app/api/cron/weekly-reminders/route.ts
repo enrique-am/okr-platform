@@ -10,6 +10,13 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "No autorizado" }, { status: 401 })
   }
 
+  // Check notification settings
+  const settings = await prisma.notificationSettings.findFirst()
+  if (settings && !settings.weeklyReminderEnabled) {
+    return NextResponse.json({ ok: true, skipped: true, reason: "reminders_disabled" })
+  }
+  const customMessage = settings?.customReminderMessage ?? null
+
   // Date math runs in UTC on the server. Railway should be configured to call
   // this endpoint at 14:00 UTC on Mondays, which equals 08:00 CST (UTC-6) or
   // 09:00 CDT (UTC-5) in Mexico City time, depending on daylight-saving season.
@@ -62,6 +69,7 @@ export async function POST(req: NextRequest) {
           teamName: team.name,
           teamSlug: team.slug,
           orcs,
+          customMessage,
         })
         sent++
       } catch (err) {

@@ -145,11 +145,13 @@ export async function sendWeeklyCheckinReminder(
     teamName,
     teamSlug,
     orcs,
+    customMessage,
   }: {
     name?: string | null
     teamName: string
     teamSlug: string
     orcs: OrcSummary[]
+    customMessage?: string | null
   }
 ) {
   const firstName = name?.split(" ")[0] ?? null
@@ -231,6 +233,14 @@ export async function sendWeeklyCheckinReminder(
     <p style="margin:10px 0 0;font-size:12px;color:#9ca3af;text-align:center;font-style:italic;">
       "Los pequeños avances constantes construyen los grandes resultados."
     </p>
+    ${customMessage ? `
+    <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-top:20px;">
+      <tr>
+        <td style="background-color:#f0fdf4;border-radius:10px;padding:14px 16px;border-left:3px solid #72bf44;">
+          <p style="margin:0;font-size:13px;color:#374151;line-height:1.65;">${customMessage}</p>
+        </td>
+      </tr>
+    </table>` : ""}
   `
 
   await resend.emails.send({
@@ -253,6 +263,7 @@ export async function sendDeadlineReminder(
     teamName,
     teamSlug,
     daysLeft,
+    customMessage,
   }: {
     name?: string | null
     orcTitle: string
@@ -261,6 +272,7 @@ export async function sendDeadlineReminder(
     teamName: string
     teamSlug: string
     daysLeft: number
+    customMessage?: string | null
   }
 ) {
   const firstName = name?.split(" ")[0] ?? null
@@ -330,12 +342,177 @@ export async function sendDeadlineReminder(
     <p style="margin:10px 0 0;font-size:12px;color:#9ca3af;text-align:center;font-style:italic;">
       ¡El esfuerzo final de tu equipo hace la diferencia!
     </p>
+    ${customMessage ? `
+    <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-top:20px;">
+      <tr>
+        <td style="background-color:#f0fdf4;border-radius:10px;padding:14px 16px;border-left:3px solid #72bf44;">
+          <p style="margin:0;font-size:13px;color:#374151;line-height:1.65;">${customMessage}</p>
+        </td>
+      </tr>
+    </table>` : ""}
   `
 
   await resend.emails.send({
     from: FROM,
     to,
     subject: `ORC por vencer en ${daysLabel}: ${orcTitle}`,
+    html: emailWrapper(content),
+  })
+}
+
+// ─── Executive Weekly Digest ──────────────────────────────────────────────────
+
+interface DigestTeam {
+  name: string
+  slug: string
+  progress: number
+  objectiveCount: number
+}
+
+interface DigestOrc {
+  title: string
+  teamName: string
+  progress: number
+  trackingStatus: string
+}
+
+export async function sendWeeklyDigest(
+  to: string,
+  {
+    name,
+    teams,
+    atRiskOrcs,
+    topTeam,
+    customMessage,
+  }: {
+    name?: string | null
+    teams: DigestTeam[]
+    atRiskOrcs: DigestOrc[]
+    topTeam: DigestTeam | null
+    customMessage?: string | null
+  }
+) {
+  const firstName = name?.split(" ")[0] ?? null
+  const dashboardUrl = `${APP_URL}/dashboard/company`
+
+  const teamRows = teams
+    .map((team, idx) => {
+      const pct = Math.min(100, Math.round(team.progress))
+      const barColor = pct >= 70 ? "#72bf44" : pct >= 60 ? "#f59e0b" : "#ef4444"
+      const textColor = pct >= 70 ? "#15803d" : pct >= 60 ? "#b45309" : "#b91c1c"
+      const dot = pct >= 70 ? "#72bf44" : pct >= 60 ? "#f59e0b" : "#ef4444"
+      const rankBg = idx === 0 ? "#fef9c3" : "#f9fafb"
+      return `
+        <tr style="background-color:${rankBg};">
+          <td style="padding:10px 12px;font-size:12px;font-weight:700;color:#6b7280;width:28px;">#${idx + 1}</td>
+          <td style="padding:10px 4px;">
+            <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background-color:${dot};margin-right:6px;vertical-align:middle;"></span>
+            <span style="font-size:13px;font-weight:600;color:#111827;">${team.name}</span>
+            <span style="font-size:11px;color:#9ca3af;margin-left:6px;">${team.objectiveCount} ORC${team.objectiveCount !== 1 ? "s" : ""}</span>
+          </td>
+          <td style="padding:10px 12px;text-align:right;white-space:nowrap;">
+            <span style="font-size:13px;font-weight:700;color:${textColor};">${pct}%</span>
+          </td>
+          <td style="padding:10px 12px;width:100px;">
+            <div style="background-color:#e5e7eb;border-radius:999px;height:6px;overflow:hidden;">
+              <div style="width:${pct}%;height:6px;background-color:${barColor};border-radius:999px;"></div>
+            </div>
+          </td>
+        </tr>`
+    })
+    .join("")
+
+  const atRiskRows = atRiskOrcs
+    .map((orc) => {
+      const pct = Math.min(100, Math.round(orc.progress))
+      const isAtRisk = orc.trackingStatus === "AT_RISK"
+      const bg = isAtRisk ? "#fffbeb" : "#fef2f2"
+      const border = isAtRisk ? "#fde68a" : "#fecaca"
+      const textColor = isAtRisk ? "#b45309" : "#b91c1c"
+      const label = isAtRisk ? "En riesgo" : "Retrasado"
+      return `
+        <tr>
+          <td style="padding:8px 0;">
+            <table width="100%" cellpadding="0" cellspacing="0" border="0"
+                   style="background-color:${bg};border:1px solid ${border};border-radius:8px;padding:10px 14px;">
+              <tr>
+                <td>
+                  <span style="font-size:11px;font-weight:600;color:#9ca3af;">${orc.teamName}</span>
+                  <span style="font-size:13px;font-weight:600;color:#111827;display:block;margin-top:2px;">${orc.title}</span>
+                </td>
+                <td style="text-align:right;white-space:nowrap;padding-left:12px;">
+                  <span style="font-size:12px;font-weight:700;color:${textColor};">${label} · ${pct}%</span>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>`
+    })
+    .join("")
+
+  const topTeamHtml = topTeam
+    ? `
+    <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:20px;">
+      <tr>
+        <td style="background-color:#f0fdf4;border-radius:12px;padding:16px 20px;border:1px solid #bbf7d0;">
+          <p style="margin:0 0 4px;font-size:11px;font-weight:600;color:#374151;text-transform:uppercase;letter-spacing:0.5px;">🏆 Equipo destacado de la semana</p>
+          <p style="margin:0;font-size:16px;font-weight:700;color:#15803d;">${topTeam.name}</p>
+          <p style="margin:4px 0 0;font-size:13px;color:#166534;">${Math.round(topTeam.progress)}% de avance general</p>
+        </td>
+      </tr>
+    </table>`
+    : ""
+
+  const atRiskSection = atRiskOrcs.length > 0
+    ? `
+    <p style="margin:20px 0 8px;font-size:13px;font-weight:700;color:#111827;">ORCs que requieren atención</p>
+    <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:20px;">
+      ${atRiskRows}
+    </table>`
+    : `
+    <p style="margin:20px 0 8px;font-size:13px;color:#6b7280;text-align:center;">
+      ✅ Todos los ORCs están en seguimiento esta semana.
+    </p>`
+
+  const content = `
+    <h1 style="margin:0 0 6px;font-size:20px;font-weight:700;color:#111827;">
+      ${firstName ? `Hola, ${firstName}` : "Hola"} — Digest Ejecutivo Semanal
+    </h1>
+    <p style="margin:0 0 20px;font-size:14px;color:#6b7280;line-height:1.7;">
+      Aquí tienes el resumen de progreso de todos los equipos de Grupo AM para esta semana.
+    </p>
+
+    ${topTeamHtml}
+
+    <p style="margin:0 0 8px;font-size:13px;font-weight:700;color:#111827;">Progreso por equipo</p>
+    <table width="100%" cellpadding="0" cellspacing="0" border="0"
+           style="margin-bottom:4px;border:1px solid #e5e7eb;border-radius:10px;overflow:hidden;">
+      ${teamRows || `<tr><td style="padding:16px;font-size:13px;color:#9ca3af;text-align:center;">Sin equipos con ORCs activos esta semana.</td></tr>`}
+    </table>
+
+    ${atRiskSection}
+
+    <div style="text-align:center;margin:24px 0 10px;">
+      <a href="${dashboardUrl}"
+         style="display:inline-block;background-color:#72bf44;color:#ffffff;font-weight:600;font-size:14px;padding:13px 36px;border-radius:10px;text-decoration:none;">
+        Ver tablero de empresa
+      </a>
+    </div>
+
+    ${customMessage ? `
+    <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-top:20px;">
+      <tr>
+        <td style="background-color:#f0fdf4;border-radius:10px;padding:14px 16px;border-left:3px solid #72bf44;">
+          <p style="margin:0;font-size:13px;color:#374151;line-height:1.65;">${customMessage}</p>
+        </td>
+      </tr>
+    </table>` : ""}
+  `
+
+  await resend.emails.send({
+    from: FROM,
+    to,
+    subject: "Digest Ejecutivo Semanal – Grupo AM",
     html: emailWrapper(content),
   })
 }
