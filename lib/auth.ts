@@ -78,6 +78,16 @@ export const authOptions: NextAuthOptions = {
       return session
     },
   },
+  events: {
+    async createUser({ user }) {
+      if (user.id) {
+        await prisma.user.update({
+          where: { id: user.id },
+          data: { lastLoginAt: new Date() },
+        })
+      }
+    },
+  },
   pages: {
     signIn: "/login",
   },
