@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { sendWeeklyCheckinReminder } from "@/lib/email"
 import { calcKRProgress, avgProgress } from "@/lib/progress"
-import { UserStatus, ObjectiveStatus } from "@prisma/client"
+import { UserStatus, ObjectiveStatus, Role } from "@prisma/client"
 
 export async function POST(req: NextRequest) {
   const auth = req.headers.get("authorization")
@@ -15,32 +15,27 @@ export async function POST(req: NextRequest) {
   // 09:00 CDT (UTC-5) in Mexico City time, depending on daylight-saving season.
   const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
 
-  // Find ACTIVE users who belong to a team and have not submitted any
-  // check-in in the last 7 days, AND whose team has at least one active objective.
-  const users = await prisma.user.findMany({
+  // Find teams with at least one active objective and load their LEAD/MEMBER members
+  // who have not submitted any check-in in the last 7 days.
+  const teams = await prisma.team.findMany({
     where: {
-      status: UserStatus.ACTIVE,
-      teamId: { not: null },
-      checkIns: {
-        none: {
-          createdAt: { gte: sevenDaysAgo },
-        },
-      },
-      team: {
-        objectives: {
-          some: { status: ObjectiveStatus.ACTIVE },
-        },
-      },
+      objectives: { some: { status: ObjectiveStatus.ACTIVE } },
     },
     include: {
-      team: {
-        include: {
-          objectives: {
-            where: { status: ObjectiveStatus.ACTIVE },
-            orderBy: { createdAt: "asc" },
-            include: { keyResults: true },
+      objectives: {
+        where: { status: ObjectiveStatus.ACTIVE },
+        orderBy: { createdAt: "asc" },
+        include: { keyResults: true },
+      },
+      userTeams: {
+        where: {
+          user: {
+            status: UserStatus.ACTIVE,
+            role: { in: [Role.LEAD, Role.MEMBER] },
+            checkIns: { none: { createdAt: { gte: sevenDaysAgo } } },
           },
         },
+        select: { user: { select: { id: true, name: true, email: true } } },
       },
     },
   })
@@ -48,9 +43,7 @@ export async function POST(req: NextRequest) {
   let sent = 0
   let failed = 0
 
-  for (const user of users) {
-    const team = user.team!
-
+  for (const team of teams) {
     const orcs = team.objectives.map((obj, idx) => {
       const progresses = obj.keyResults.map((kr) =>
         calcKRProgress(kr.type, kr.currentValue, kr.targetValue)
@@ -62,19 +55,21 @@ export async function POST(req: NextRequest) {
       }
     })
 
-    try {
-      await sendWeeklyCheckinReminder(user.email, {
-        name: user.name,
-        teamName: team.name,
-        teamSlug: team.slug,
-        orcs,
-      })
-      sent++
-    } catch (err) {
-      console.error(`[weekly-reminders] Error sending to ${user.email}:`, err)
-      failed++
+    for (const { user } of team.userTeams) {
+      try {
+        await sendWeeklyCheckinReminder(user.email, {
+          name: user.name,
+          teamName: team.name,
+          teamSlug: team.slug,
+          orcs,
+        })
+        sent++
+      } catch (err) {
+        console.error(`[weekly-reminders] Error sending to ${user.email}:`, err)
+        failed++
+      }
     }
   }
 
-  return NextResponse.json({ ok: true, sent, failed, total: users.length })
+  return NextResponse.json({ ok: true, sent, failed })
 }

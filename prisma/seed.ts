@@ -166,9 +166,10 @@ async function main() {
     })
 
     // 3. Assign lead to team
-    await prisma.user.update({
-      where: { id: lead.id },
-      data: { teamId: team.id },
+    await prisma.userTeam.upsert({
+      where: { userId_teamId: { userId: lead.id, teamId: team.id } },
+      create: { userId: lead.id, teamId: team.id },
+      update: {},
     })
 
     // 4. Clear existing objectives for this team (idempotent re-seed)

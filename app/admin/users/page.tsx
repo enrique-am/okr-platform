@@ -22,7 +22,9 @@ export default async function AdminUsersPage({
 
   const [users, teams, totalUsers] = await Promise.all([
     prisma.user.findMany({
-      include: { team: { select: { id: true, name: true } } },
+      include: {
+        userTeams: { select: { team: { select: { id: true, name: true } } } },
+      },
       orderBy: { name: "asc" },
       skip,
       take: PAGE_SIZE,
@@ -42,8 +44,7 @@ export default async function AdminUsersPage({
     email: u.email,
     role: u.role,
     status: u.status,
-    teamId: u.teamId,
-    team: u.team,
+    teams: u.userTeams.map((ut) => ut.team),
     lastLoginAt: u.lastLoginAt?.toISOString() ?? null,
     memberSince: u.createdAt.toLocaleDateString("es-MX", {
       day: "numeric",

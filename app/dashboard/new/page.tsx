@@ -12,15 +12,24 @@ export default async function NewObjectivePage() {
   const session = await getServerSession(authOptions)
   if (!session) redirect("/login")
 
+  const userCtx = { id: session.user.id, role: session.user.role, teamIds: session.user.teamIds ?? [] }
+
   // Guard: only ADMIN and LEAD can access the create form
-  if (!canCreateObjective({ id: session.user.id, role: session.user.role, teamId: session.user.teamId })) {
+  if (!canCreateObjective(userCtx)) {
     redirect("/dashboard")
   }
 
-  const teams = await prisma.team.findMany({
-    select: { id: true, name: true },
-    orderBy: { name: "asc" },
-  })
+  // LEAD only sees their own teams; ADMIN/EXECUTIVE see all
+  const teams =
+    session.user.role === "ADMIN" || session.user.role === "EXECUTIVE"
+      ? await prisma.team.findMany({ select: { id: true, name: true }, orderBy: { name: "asc" } })
+      : await prisma.userTeam
+          .findMany({
+            where: { userId: session.user.id },
+            select: { team: { select: { id: true, name: true } } },
+            orderBy: { team: { name: "asc" } },
+          })
+          .then((uts) => uts.map((ut) => ut.team))
 
   return (
     <AppLayout

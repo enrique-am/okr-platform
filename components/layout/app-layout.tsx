@@ -20,11 +20,12 @@ export async function AppLayout({
 }: AppLayoutProps) {
   const session = await getServerSession(authOptions)
 
-  // Fetch team name for the feedback widget (session only stores teamId)
+  // Fetch the first team name for the feedback widget
   let teamName: string | null = null
-  if (session?.user?.teamId) {
+  const firstTeamId = session?.user?.teamIds?.[0]
+  if (firstTeamId) {
     const team = await prisma.team.findUnique({
-      where: { id: session.user.teamId },
+      where: { id: firstTeamId },
       select: { name: true },
     })
     teamName = team?.name ?? null

@@ -25,7 +25,7 @@ export default async function AdminActivityPage({
   const where: Record<string, unknown> = {}
 
   if (searchParams.user) where.userId = searchParams.user
-  if (searchParams.team) where.user = { teamId: searchParams.team }
+  if (searchParams.team) where.user = { userTeams: { some: { teamId: searchParams.team } } }
   if (searchParams.action) where.action = searchParams.action
   if (searchParams.from || searchParams.to) {
     where.createdAt = {
@@ -39,7 +39,12 @@ export default async function AdminActivityPage({
       where,
       include: {
         user: {
-          select: { id: true, name: true, email: true, team: { select: { id: true, name: true } } },
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            userTeams: { take: 1, select: { team: { select: { name: true } } } },
+          },
         },
       },
       orderBy: { createdAt: "desc" },
@@ -64,7 +69,7 @@ export default async function AdminActivityPage({
       id: log.user.id,
       name: log.user.name,
       email: log.user.email,
-      teamName: log.user.team?.name ?? null,
+      teamName: log.user.userTeams[0]?.team?.name ?? null,
     },
   }))
 

@@ -12,10 +12,14 @@ export default async function AdminTeamsPage() {
 
   const teams = await prisma.team.findMany({
     include: {
-      _count: { select: { members: true } },
+      _count: { select: { userTeams: true } },
       objectives: {
         where: { status: "ACTIVE" },
         select: { id: true },
+      },
+      lead: { select: { id: true, name: true } },
+      userTeams: {
+        select: { user: { select: { id: true, name: true, role: true } } },
       },
     },
     orderBy: { name: "asc" },
@@ -26,7 +30,13 @@ export default async function AdminTeamsPage() {
     name: t.name,
     slug: t.slug,
     activeORCs: t.objectives.length,
-    members: t._count.members,
+    members: t._count.userTeams,
+    memberNames: t.userTeams.slice(0, 5).map((ut) => ut.user.name ?? "Sin nombre"),
+    leadId: t.leadId,
+    leadName: t.lead?.name ?? null,
+    eligibleLeads: t.userTeams
+      .filter((ut) => ut.user.role === "LEAD" || ut.user.role === "ADMIN")
+      .map((ut) => ({ id: ut.user.id, name: ut.user.name ?? "Sin nombre" })),
   }))
 
   return (

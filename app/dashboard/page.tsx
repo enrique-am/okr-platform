@@ -2,7 +2,6 @@ import { getServerSession } from "next-auth"
 import { redirect } from "next/navigation"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
-import { Role } from "@prisma/client"
 import Link from "next/link"
 import { AppLayout } from "@/components/layout/app-layout"
 import { CompanySummary } from "@/components/dashboard/company-summary"
@@ -17,13 +16,16 @@ export default async function DashboardPage() {
   const session = await getServerSession(authOptions)
   if (!session) redirect("/login")
 
+  const userTeamIds = session.user.teamIds ?? []
+  const isLimitedRole =
+    session.user.role !== "ADMIN" && session.user.role !== "EXECUTIVE"
+
   const rawTeams = await prisma.team.findMany({
+    where: isLimitedRole && userTeamIds.length > 0
+      ? { id: { in: userTeamIds } }
+      : undefined,
     include: {
-      members: {
-        where: { role: { in: [Role.LEAD, Role.ADMIN] } },
-        take: 1,
-        select: { name: true },
-      },
+      lead: { select: { name: true } },
       objectives: {
         where: { status: "ACTIVE", level: "TEAM" },
         orderBy: { createdAt: "asc" },
@@ -54,7 +56,7 @@ export default async function DashboardPage() {
       id: team.id,
       slug: team.slug,
       name: team.name,
-      lead: team.members[0]?.name ?? "Sin líder asignado",
+      lead: team.lead?.name ?? "Sin líder asignado",
       objectives: team.objectives.map((obj, objIdx) => {
         const krs = obj.keyResults.map((kr, krIdx) => {
           const progress = calcKRProgress(kr.type, kr.currentValue, kr.targetValue, kr.startValue)
@@ -90,8 +92,10 @@ export default async function DashboardPage() {
   const userCtx = {
     id: session.user.id,
     role: session.user.role,
-    teamId: session.user.teamId,
+    teamIds: userTeamIds,
   }
+
+  const noTeamAssigned = isLimitedRole && userTeamIds.length === 0
 
   return (
     <AppLayout>
@@ -136,16 +140,23 @@ export default async function DashboardPage() {
         <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-4">
           Equipos
         </h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-          {teams.map((team) => (
-            <TeamCard
-              key={team.id}
-              team={team}
-              canEdit={canEditObjective(userCtx, team.id)}
-              canCheckin={canSubmitCheckin(userCtx, team.id)}
-            />
-          ))}
-        </div>
+        {noTeamAssigned ? (
+          <div className="rounded-2xl border border-dashed border-gray-200 px-6 py-12 text-center">
+            <p className="text-sm font-medium text-gray-500">No estás asignado a ningún equipo</p>
+            <p className="text-xs text-gray-400 mt-1">Contacta a un administrador para que te asigne a un equipo.</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+            {teams.map((team) => (
+              <TeamCard
+                key={team.id}
+                team={team}
+                canEdit={canEditObjective(userCtx, team.id)}
+                canCheckin={canSubmitCheckin(userCtx, team.id)}
+              />
+            ))}
+          </div>
+        )}
       </div>
     </AppLayout>
   )

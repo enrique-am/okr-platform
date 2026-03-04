@@ -3,12 +3,12 @@ import type { Role } from "@prisma/client"
 export interface PermissionUser {
   id: string
   role: Role
-  teamId?: string | null
+  teamIds: string[]
 }
 
 /**
  * ADMIN and LEAD can create objectives.
- * LEAD may only create for their own team (enforced separately by checking input.teamId).
+ * LEAD may only create for their own teams (enforced separately by checking input.teamId).
  */
 export function canCreateObjective(user: PermissionUser): boolean {
   return user.role === "ADMIN" || user.role === "LEAD"
@@ -17,7 +17,7 @@ export function canCreateObjective(user: PermissionUser): boolean {
 /**
  * Can the user edit an objective that belongs to `objectiveTeamId`?
  * ADMIN: always yes.
- * LEAD: only if objectiveTeamId matches their own teamId.
+ * LEAD: only if objectiveTeamId is one of their teams.
  * EXECUTIVE / MEMBER: no.
  */
 export function canEditObjective(
@@ -26,7 +26,7 @@ export function canEditObjective(
 ): boolean {
   if (user.role === "ADMIN") return true
   if (user.role === "LEAD") {
-    return !!user.teamId && user.teamId === objectiveTeamId
+    return objectiveTeamId != null && user.teamIds.includes(objectiveTeamId)
   }
   return false
 }
@@ -51,7 +51,7 @@ export function canManageCompanyObjective(
 /**
  * Can the user submit a check-in for a team?
  * ADMIN: always yes.
- * LEAD and MEMBER: only for their own team.
+ * LEAD and MEMBER: only for their own teams.
  * EXECUTIVE: no.
  */
 export function canSubmitCheckin(
@@ -60,7 +60,7 @@ export function canSubmitCheckin(
 ): boolean {
   if (user.role === "ADMIN") return true
   if (user.role === "LEAD" || user.role === "MEMBER") {
-    return !!user.teamId && user.teamId === teamId
+    return teamId != null && user.teamIds.includes(teamId)
   }
   return false
 }

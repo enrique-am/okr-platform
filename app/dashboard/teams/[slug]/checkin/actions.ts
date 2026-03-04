@@ -61,11 +61,11 @@ export async function submitCheckIn(input: SubmitCheckInInput): Promise<SubmitCh
   if (!session?.user?.id) return { success: false, error: "No autenticado" }
 
   // ─── Permission check ─────────────────────────────────────────────────────
-  const [teamForPermission, dbUser] = await Promise.all([
-    prisma.team.findUnique({ where: { slug: input.teamSlug }, select: { id: true } }),
-    prisma.user.findUnique({ where: { id: session.user.id }, select: { teamId: true } }),
-  ])
-  if (!canSubmitCheckin({ ...session.user, teamId: dbUser?.teamId }, teamForPermission?.id)) {
+  const teamForPermission = await prisma.team.findUnique({
+    where: { slug: input.teamSlug },
+    select: { id: true },
+  })
+  if (!canSubmitCheckin({ ...session.user, teamIds: session.user.teamIds ?? [] }, teamForPermission?.id)) {
     return { success: false, error: "Sin permiso para registrar avances en este equipo" }
   }
 

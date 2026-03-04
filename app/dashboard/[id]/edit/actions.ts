@@ -73,24 +73,19 @@ export async function updateObjective(
 
   // ─── Permission check ─────────────────────────────────────────────────────
   // Fetch the objective's team from DB to verify permissions (never trust client input alone)
-  const [objective, dbUser] = await Promise.all([
-    prisma.objective.findUnique({
-      where: { id: input.objectiveId },
-      select: { teamId: true, level: true },
-    }),
-    prisma.user.findUnique({
-      where: { id: session.user.id },
-      select: { teamId: true },
-    }),
-  ])
+  const objective = await prisma.objective.findUnique({
+    where: { id: input.objectiveId },
+    select: { teamId: true, level: true },
+  })
   if (objective?.level === "COMPANY") {
     return { success: false, error: "Usa la sección Empresa para editar ORCs Empresariales" }
   }
-  if (!canEditObjective({ ...session.user, teamId: dbUser?.teamId }, objective?.teamId)) {
+  const userTeamIds = session.user.teamIds ?? []
+  if (!canEditObjective({ ...session.user, teamIds: userTeamIds }, objective?.teamId)) {
     return { success: false, error: "Sin permiso para editar este objetivo" }
   }
-  // LEAD cannot reassign an objective to a different team
-  if (session.user.role === "LEAD" && input.teamId !== dbUser?.teamId) {
+  // LEAD cannot reassign an objective to a team they don't belong to
+  if (session.user.role === "LEAD" && !userTeamIds.includes(input.teamId)) {
     return { success: false, error: "No puedes reasignar un objetivo a otro equipo" }
   }
 

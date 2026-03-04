@@ -49,7 +49,7 @@ export default async function AdminFeedbackPage({
             id: true,
             name: true,
             email: true,
-            team: { select: { name: true } },
+            userTeams: { take: 1, select: { team: { select: { name: true } } } },
           },
         },
       },
@@ -79,7 +79,7 @@ export default async function AdminFeedbackPage({
       id: r.user.id,
       name: r.user.name,
       email: r.user.email,
-      teamName: r.user.team?.name ?? null,
+      teamName: r.user.userTeams[0]?.team?.name ?? null,
     },
   }))
 

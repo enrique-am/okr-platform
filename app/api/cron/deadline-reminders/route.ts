@@ -40,11 +40,14 @@ export async function POST(req: NextRequest) {
         include: { keyResults: true },
       },
       // Only LEAD + MEMBER active users receive the reminder
-      members: {
+      userTeams: {
         where: {
-          status: UserStatus.ACTIVE,
-          role: { in: [Role.LEAD, Role.MEMBER] },
+          user: {
+            status: UserStatus.ACTIVE,
+            role: { in: [Role.LEAD, Role.MEMBER] },
+          },
         },
+        select: { user: { select: { name: true, email: true } } },
       },
     },
   })
@@ -70,7 +73,7 @@ export async function POST(req: NextRequest) {
         (obj.endDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
       )
 
-      for (const member of team.members) {
+      for (const { user: member } of team.userTeams) {
         try {
           await sendDeadlineReminder(member.email, {
             name: member.name,

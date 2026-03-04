@@ -72,13 +72,12 @@ export async function createObjective(
   if (!canCreateObjective(session.user)) {
     return { success: false, error: "Sin permiso para crear objetivos" }
   }
-  // LEAD can only create objectives for their own team — verify from DB
+  // LEAD can only create objectives for their own teams
   if (session.user.role === "LEAD") {
-    const dbUser = await prisma.user.findUnique({
-      where: { id: session.user.id },
-      select: { teamId: true },
+    const isMember = await prisma.userTeam.findUnique({
+      where: { userId_teamId: { userId: session.user.id, teamId: input.teamId } },
     })
-    if (dbUser?.teamId !== input.teamId) {
+    if (!isMember) {
       return { success: false, error: "Solo puedes crear ORCs para tu propio equipo" }
     }
   }

@@ -59,17 +59,41 @@ export async function updateTeamName(
   }
 }
 
+export async function updateTeamLead(
+  teamId: string,
+  leadId: string | null
+): Promise<{ success: true } | { success: false; error: string }> {
+  try {
+    await assertAdmin()
+    if (leadId) {
+      const membership = await prisma.userTeam.findUnique({
+        where: { userId_teamId: { userId: leadId, teamId } },
+        select: { user: { select: { role: true, status: true } } },
+      })
+      if (!membership)
+        return { success: false, error: "El usuario no es miembro del equipo" }
+      if (!["LEAD", "ADMIN"].includes(membership.user.role))
+        return { success: false, error: "Solo líderes y administradores pueden ser líderes de equipo" }
+      if (membership.user.status !== "ACTIVE")
+        return { success: false, error: "El usuario no está activo" }
+    }
+    await prisma.team.update({ where: { id: teamId }, data: { leadId: leadId ?? null } })
+    revalidatePath("/admin/teams")
+    revalidatePath("/dashboard")
+    return { success: true }
+  } catch (e) {
+    return { success: false, error: e instanceof Error ? e.message : "Error desconocido" }
+  }
+}
+
 export async function deleteTeam(
   teamId: string
 ): Promise<{ success: true } | { success: false; error: string }> {
   try {
     await assertAdmin()
     await prisma.$transaction([
-      // Detach all members from the team
-      prisma.user.updateMany({
-        where: { teamId },
-        data: { teamId: null },
-      }),
+      // Remove all UserTeam memberships for this team
+      prisma.userTeam.deleteMany({ where: { teamId } }),
       // Archive (cancel) the team's objectives — data is preserved
       prisma.objective.updateMany({
         where: { teamId, status: { not: ObjectiveStatus.CANCELLED } },

@@ -20,11 +20,17 @@ export async function startImpersonation(targetUserId: string) {
     return { success: false, error: "No puedes impersonarte a ti mismo" }
   }
 
-  // Fetch target user
-  const target = await prisma.user.findUnique({
-    where: { id: targetUserId },
-    select: { id: true, name: true, email: true, role: true, status: true, teamId: true },
-  })
+  // Fetch target user and their team memberships
+  const [target, userTeams] = await Promise.all([
+    prisma.user.findUnique({
+      where: { id: targetUserId },
+      select: { id: true, name: true, email: true, role: true, status: true },
+    }),
+    prisma.userTeam.findMany({
+      where: { userId: targetUserId },
+      select: { teamId: true },
+    }),
+  ])
 
   if (!target) return { success: false, error: "Usuario no encontrado" }
   if (target.role === "ADMIN") return { success: false, error: "No puedes impersonar a otro administrador" }
@@ -44,7 +50,7 @@ export async function startImpersonation(targetUserId: string) {
       name: target.name,
       email: target.email,
       role: target.role,
-      teamId: target.teamId,
+      teamIds: userTeams.map((ut) => ut.teamId),
       impersonatedBy: { id: session.user.id, name: session.user.name ?? "Admin" },
     },
     secret,

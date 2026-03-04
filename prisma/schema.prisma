@@ -71,13 +71,13 @@ model User {
   lastLoginAt   DateTime?
   inviteToken   String?
 
-  teamId String?
-  team   Team?   @relation(fields: [teamId], references: [id])
+  userTeams UserTeam[]
 
   ownedObjectives  Objective[]      @relation("ObjectiveOwner")
   checkIns         CheckIn[]
   activityLogs     ActivityLog[]
   feedbackReports  FeedbackReport[]
+  ledTeams         Team[]           @relation("TeamLead")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -93,11 +93,26 @@ model Team {
   description String?
   slug        String  @unique
 
-  members    User[]
+  leadId String?
+  lead   User?   @relation("TeamLead", fields: [leadId], references: [id], onDelete: SetNull)
+
+  userTeams  UserTeam[]
   objectives Objective[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+model UserTeam {
+  userId String
+  teamId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  team   Team   @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@id([userId, teamId])
+  @@index([teamId])
 }
 
 model Objective {

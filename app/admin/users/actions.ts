@@ -42,13 +42,16 @@ export async function updateUserRole(userId: string, role: string): Promise<Resu
   }
 }
 
-export async function updateUserTeam(userId: string, teamId: string | null): Promise<Result> {
+export async function updateUserTeams(userId: string, teamIds: string[]): Promise<Result> {
   try {
     await assertAdmin()
-    await prisma.user.update({
-      where: { id: userId },
-      data: { teamId: teamId || null },
-    })
+    await prisma.$transaction([
+      prisma.userTeam.deleteMany({ where: { userId } }),
+      prisma.userTeam.createMany({
+        data: teamIds.map((teamId) => ({ userId, teamId })),
+        skipDuplicates: true,
+      }),
+    ])
     revalidatePath("/admin/users")
     return { success: true }
   } catch (e) {
@@ -88,9 +91,9 @@ export async function inviteUser(
       data: {
         email: normalizedEmail,
         role: role as Role,
-        teamId,
         status: UserStatus.PENDING,
         inviteToken,
+        userTeams: { create: { teamId } },
       },
     })
 
@@ -159,9 +162,9 @@ export async function bulkInviteUsers(
           data: {
             email: row.normalizedEmail,
             role: row.role as Role,
-            teamId: row.teamId,
             status: UserStatus.PENDING,
             inviteToken,
+            userTeams: { create: { teamId: row.teamId } },
           },
         })
 

@@ -3,7 +3,7 @@ import { redirect, notFound } from "next/navigation"
 import Link from "next/link"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
-import { Role, KeyResultType } from "@prisma/client"
+import { KeyResultType } from "@prisma/client"
 import { AppLayout } from "@/components/layout/app-layout"
 import type { Metadata } from "next"
 import { canEditObjective, canSubmitCheckin } from "@/lib/permissions"
@@ -99,11 +99,7 @@ export default async function TeamPage({ params }: { params: { slug: string } })
   const team = await prisma.team.findUnique({
     where: { slug: params.slug },
     include: {
-      members: {
-        where: { role: { in: [Role.LEAD, Role.ADMIN] } },
-        take: 1,
-        select: { name: true },
-      },
+      lead: { select: { name: true } },
       objectives: {
         where: { status: "ACTIVE" },
         orderBy: { createdAt: "asc" },
@@ -128,12 +124,12 @@ export default async function TeamPage({ params }: { params: { slug: string } })
 
   if (!team) notFound()
 
-  const lead = team.members[0]?.name ?? "Sin líder asignado"
+  const lead = team.lead?.name ?? "Sin líder asignado"
 
   const userCtx = {
     id: session.user.id,
     role: session.user.role,
-    teamId: session.user.teamId,
+    teamIds: session.user.teamIds ?? [],
   }
   const userCanEdit = canEditObjective(userCtx, team.id)
   const userCanCheckin = canSubmitCheckin(userCtx, team.id)

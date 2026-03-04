@@ -3,7 +3,7 @@
 import { useState, useTransition, useRef } from "react"
 import {
   updateUserRole,
-  updateUserTeam,
+  updateUserTeams,
   inviteUser,
   bulkInviteUsers,
   deactivateUser,
@@ -23,8 +23,7 @@ interface UserRow {
   email: string
   role: string
   status: string
-  teamId: string | null
-  team: { id: string; name: string } | null
+  teams: { id: string; name: string }[]
   lastLoginAt: string | null
   memberSince: string
 }
@@ -103,7 +102,10 @@ function UserRowComponent({
   onCancelInvite: (user: UserRow) => void
 }) {
   const [role, setRole] = useState(user.role)
-  const [teamId, setTeamId] = useState(user.teamId ?? "")
+  const [selectedTeamIds, setSelectedTeamIds] = useState<string[]>(
+    user.teams.map((t) => t.id)
+  )
+  const [teamsOpen, setTeamsOpen] = useState(false)
   const [isPending, startTransition] = useTransition()
   const [roleError, setRoleError] = useState<string | null>(null)
   const [teamError, setTeamError] = useState<string | null>(null)
@@ -122,15 +124,17 @@ function UserRowComponent({
     })
   }
 
-  function handleTeamChange(e: React.ChangeEvent<HTMLSelectElement>) {
-    const prev = teamId
-    const next = e.target.value
-    setTeamId(next)
+  function handleTeamToggle(teamId: string) {
+    const prev = selectedTeamIds
+    const next = prev.includes(teamId)
+      ? prev.filter((id) => id !== teamId)
+      : [...prev, teamId]
+    setSelectedTeamIds(next)
     setTeamError(null)
     startTransition(async () => {
-      const result = await updateUserTeam(user.id, next || null)
+      const result = await updateUserTeams(user.id, next)
       if (!result.success) {
-        setTeamId(prev)
+        setSelectedTeamIds(prev)
         setTeamError(result.error)
       }
     })
@@ -190,24 +194,48 @@ function UserRowComponent({
         </div>
       </td>
 
-      {/* Team */}
+      {/* Teams (multi-select) */}
       <td className="px-4 py-3">
-        <div>
-          <select
-            value={teamId}
-            onChange={handleTeamChange}
-            disabled={isPending}
-            className="text-sm text-gray-700 border border-gray-200 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent max-w-[200px] truncate"
-          >
-            <option value="">Sin equipo</option>
+        <button
+          onClick={() => setTeamsOpen((o) => !o)}
+          disabled={isPending}
+          className="text-sm text-gray-700 border border-gray-200 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-brand-500 text-left min-w-[120px] max-w-[200px] truncate hover:bg-gray-50 transition-colors"
+        >
+          {selectedTeamIds.length === 0
+            ? "Sin equipo"
+            : selectedTeamIds.length === 1
+            ? teams.find((t) => t.id === selectedTeamIds[0])?.name ?? "1 equipo"
+            : `${selectedTeamIds.length} equipos`}
+        </button>
+        <Modal
+          open={teamsOpen}
+          onClose={() => setTeamsOpen(false)}
+          title={`Equipos — ${user.name ?? user.email}`}
+          maxWidth="max-w-sm"
+        >
+          <div className="space-y-1">
             {teams.map((t) => (
-              <option key={t.id} value={t.id}>
+              <label
+                key={t.id}
+                className="flex items-center gap-2.5 px-2 py-2 hover:bg-gray-50 rounded-lg cursor-pointer text-sm text-gray-700"
+              >
+                <input
+                  type="checkbox"
+                  checked={selectedTeamIds.includes(t.id)}
+                  onChange={() => handleTeamToggle(t.id)}
+                  className="accent-brand-500 w-4 h-4"
+                />
                 {t.name}
-              </option>
+              </label>
             ))}
-          </select>
-          {teamError && <p className="text-xs text-red-500 mt-0.5">{teamError}</p>}
-        </div>
+            {teams.length === 0 && (
+              <p className="text-sm text-gray-400 py-2">No hay equipos disponibles.</p>
+            )}
+            {teamError && (
+              <p className="text-xs text-red-500 mt-2">{teamError}</p>
+            )}
+          </div>
+        </Modal>
       </td>
 
       {/* Status */}

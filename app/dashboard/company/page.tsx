@@ -31,7 +31,7 @@ export default async function CompanyPage() {
   const userCtx = {
     id: session.user.id,
     role: session.user.role,
-    teamId: session.user.teamId,
+    teamIds: session.user.teamIds ?? [],
   }
 
   const rawObjectives = await prisma.objective.findMany({

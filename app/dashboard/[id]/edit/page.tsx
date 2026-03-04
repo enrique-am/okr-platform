@@ -22,6 +22,17 @@ export default async function EditObjectivePage({
   const session = await getServerSession(authOptions)
   if (!session) redirect("/login")
 
+  const teamsQuery =
+    session.user.role === "ADMIN" || session.user.role === "EXECUTIVE"
+      ? prisma.team.findMany({ select: { id: true, name: true }, orderBy: { name: "asc" } })
+      : prisma.userTeam
+          .findMany({
+            where: { userId: session.user.id },
+            select: { team: { select: { id: true, name: true } } },
+            orderBy: { team: { name: "asc" } },
+          })
+          .then((uts) => uts.map((ut) => ut.team))
+
   const [objective, teams] = await Promise.all([
     prisma.objective.findUnique({
       where: { id: params.id },
@@ -33,10 +44,7 @@ export default async function EditObjectivePage({
         team: { select: { name: true, slug: true } },
       },
     }),
-    prisma.team.findMany({
-      select: { id: true, name: true },
-      orderBy: { name: "asc" },
-    }),
+    teamsQuery,
   ])
 
   if (!objective) notFound()
@@ -44,7 +52,7 @@ export default async function EditObjectivePage({
   // Guard: redirect unauthorized users before rendering the form
   if (
     !canEditObjective(
-      { id: session.user.id, role: session.user.role, teamId: session.user.teamId },
+      { id: session.user.id, role: session.user.role, teamIds: session.user.teamIds ?? [] },
       objective.teamId
     )
   ) {

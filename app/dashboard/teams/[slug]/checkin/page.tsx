@@ -59,7 +59,7 @@ export default async function CheckInPage({ params }: { params: { slug: string }
   // Guard: only ADMIN or the team's own members/leads may access check-in
   if (
     !canSubmitCheckin(
-      { id: session.user.id, role: session.user.role, teamId: session.user.teamId },
+      { id: session.user.id, role: session.user.role, teamIds: session.user.teamIds ?? [] },
       team.id
     )
   ) {

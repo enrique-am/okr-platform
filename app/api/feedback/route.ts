@@ -35,7 +35,12 @@ export async function POST(req: NextRequest) {
   // Fetch the submitting user's details for the email
   const user = await prisma.user.findUnique({
     where: { id: session.user.id },
-    select: { name: true, email: true, role: true, team: { select: { name: true } } },
+    select: {
+      name: true,
+      email: true,
+      role: true,
+      userTeams: { take: 1, select: { team: { select: { name: true } } } },
+    },
   })
 
   const report = await prisma.feedbackReport.create({
@@ -73,7 +78,7 @@ export async function POST(req: NextRequest) {
           name: user?.name ?? null,
           email: user?.email ?? session.user.email ?? "",
           role: user?.role ?? session.user.role ?? "",
-          teamName: user?.team?.name ?? null,
+          teamName: user?.userTeams[0]?.team?.name ?? null,
         },
         createdAt: report.createdAt,
       })
