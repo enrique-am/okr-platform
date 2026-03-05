@@ -36,21 +36,51 @@ enum TrackingStatus {
   OFF_TRACK
 }
 
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+  PENDING
+}
+
+enum ObjectiveLevel {
+  COMPANY
+  TEAM
+}
+
+enum FeedbackType {
+  BUG
+  FEATURE
+}
+
+enum FeedbackPriority {
+  HIGH
+  MEDIUM
+  LOW
+}
+
 // ─── Core Domain Models ───────────────────────────────────────────────────────
 
 model User {
-  id            String    @id @default(cuid())
+  id            String     @id @default(cuid())
   name          String?
-  email         String    @unique
+  email         String     @unique
   emailVerified DateTime?
   image         String?
-  role          Role      @default(MEMBER)
+  role          Role       @default(MEMBER)
+  status        UserStatus @default(ACTIVE)
+  lastLoginAt   DateTime?
+  inviteToken            String?
+  hasCompletedOnboarding Boolean    @default(false)
 
-  teamId String?
-  team   Team?   @relation(fields: [teamId], references: [id])
+  userTeams UserTeam[]
 
-  ownedObjectives Objective[] @relation("ObjectiveOwner")
-  checkIns        CheckIn[]
+  ownedObjectives  Objective[]      @relation("ObjectiveOwner")
+  checkIns         CheckIn[]
+  activityLogs     ActivityLog[]
+  feedbackReports  FeedbackReport[]
+  ledTeams         Team[]           @relation("TeamLead")
+  notificationSettingsUpdates NotificationSettings[]
+  helpSectionsUpdated         HelpSection[]          @relation("HelpSectionUpdatedBy")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -66,11 +96,26 @@ model Team {
   description String?
   slug        String  @unique
 
-  members    User[]
+  leadId String?
+  lead   User?   @relation("TeamLead", fields: [leadId], references: [id], onDelete: SetNull)
+
+  userTeams  UserTeam[]
   objectives Objective[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+model UserTeam {
+  userId String
+  teamId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  team   Team   @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@id([userId, teamId])
+  @@index([teamId])
 }
 
 model Objective {
@@ -82,8 +127,11 @@ model Objective {
   startDate       DateTime
   endDate         DateTime
 
-  ownerId String
-  owner   User   @relation("ObjectiveOwner", fields: [ownerId], references: [id])
+  level ObjectiveLevel @default(TEAM)
+  year  Int?
+
+  ownerId String?
+  owner   User?   @relation("ObjectiveOwner", fields: [ownerId], references: [id], onDelete: SetNull)
 
   teamId String?
   team   Team?   @relation(fields: [teamId], references: [id])
@@ -92,6 +140,9 @@ model Objective {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  @@index([teamId])
+  @@index([status])
 }
 
 model KeyResult {
@@ -100,6 +151,7 @@ model KeyResult {
   description    String?
   type           KeyResultType  @default(PERCENTAGE)
   targetValue    Float
+  startValue     Float?
   currentValue   Float          @default(0)
   unit           String?
   trackingStatus TrackingStatus @default(ON_TRACK)
@@ -107,7 +159,23 @@ model KeyResult {
   objectiveId String
   objective   Objective @relation(fields: [objectiveId], references: [id], onDelete: Cascade)
 
-  checkIns CheckIn[]
+  checkIns   CheckIn[]
+  dataSource DataSource?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([objectiveId])
+}
+
+model DataSource {
+  id           String  @id @default(cuid())
+  name         String
+  url          String?
+  instructions String? @db.Text
+
+  keyResultId String    @unique
+  keyResult   KeyResult @relation(fields: [keyResultId], references: [id], onDelete: Cascade)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -121,10 +189,106 @@ model CheckIn {
   keyResultId String
   keyResult   KeyResult @relation(fields: [keyResultId], references: [id], onDelete: Cascade)
 
-  authorId String
-  author   User   @relation(fields: [authorId], references: [id])
+  authorId String?
+  author   User?   @relation(fields: [authorId], references: [id], onDelete: SetNull)
 
   createdAt DateTime @default(now())
+}
+
+model ActivityLog {
+  id        String   @id @default(cuid())
+  action    String
+  metadata  Json     @default("{}")
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([action])
+  @@index([createdAt])
+}
+
+// ─── Feedback ─────────────────────────────────────────────────────────────────
+
+model FeedbackReport {
+  id               String            @id @default(cuid())
+  type             FeedbackType
+  title            String?
+  description      String            @db.Text
+  stepsToReproduce String?           @db.Text
+  screenshotBase64 String?           @db.Text
+  priority         FeedbackPriority?
+  pageUrl          String
+  userAgent        String
+  read             Boolean           @default(false)
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@index([type])
+  @@index([read])
+  @@index([userId])
+  @@index([createdAt])
+}
+
+// ─── Notification Settings (singleton: id = 1) ────────────────────────────────
+
+model NotificationSettings {
+  id Int @id @default(1)
+
+  weeklyReminderEnabled  Boolean @default(true)
+  weeklyReminderDay      Int     @default(1)
+  weeklyReminderHour     Int     @default(8)
+
+  deadlineReminderEnabled Boolean @default(true)
+  deadlineReminderDays    Int     @default(7)
+
+  weeklyDigestEnabled Boolean @default(true)
+  weeklyDigestDay     Int     @default(1)
+  weeklyDigestHour    Int     @default(7)
+
+  welcomeEmailEnabled Boolean @default(true)
+
+  customReminderMessage String?
+  customDigestMessage   String?
+
+  updatedAt   DateTime @updatedAt
+  updatedById String?
+  updatedBy   User?    @relation(fields: [updatedById], references: [id], onDelete: SetNull)
+}
+
+// ─── Help Center ──────────────────────────────────────────────────────────────
+
+model HelpSection {
+  id          String         @id @default(cuid())
+  title       String
+  slug        String         @unique
+  order       Int
+  content     String         @db.Text
+  isPublished Boolean        @default(true)
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+  updatedById String?
+  updatedBy   User?          @relation("HelpSectionUpdatedBy", fields: [updatedById], references: [id])
+  documents   HelpDocument[]
+}
+
+model HelpDocument {
+  id        String      @id @default(cuid())
+  sectionId String
+  section   HelpSection @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+  title     String
+  filename  String
+  mimeType  String
+  fileData  Bytes
+  fileSize  Int
+  order     Int
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
 }
 
 // ─── NextAuth Required Models ─────────────────────────────────────────────────

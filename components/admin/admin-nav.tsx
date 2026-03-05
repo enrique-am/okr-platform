@@ -6,13 +6,18 @@ import { usePathname } from "next/navigation"
 const TABS = [
   { href: "/admin/users", label: "Usuarios" },
   { href: "/admin/teams", label: "Equipos" },
+  { href: "/admin/activity", label: "Actividad" },
+  { href: "/admin/feedback", label: "Feedback" },
+  { href: "/admin/notifications", label: "Notificaciones" },
+  { href: "/admin/import", label: "Importar" },
+  { href: "/admin/ayuda", label: "Ayuda" },
 ]
 
 export function AdminNav() {
   const pathname = usePathname()
 
   return (
-    <div className="flex gap-1 border-b border-gray-200">
+    <div className="flex gap-1 border-b border-gray-200 mb-6">
       {TABS.map((tab) => {
         const isActive = pathname.startsWith(tab.href)
         return (

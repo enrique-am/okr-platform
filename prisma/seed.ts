@@ -1,5 +1,143 @@
 import { PrismaClient, Role, ObjectiveStatus, TrackingStatus, KeyResultType } from "@prisma/client"
 
+// ─── Help Sections ─────────────────────────────────────────────────────────────
+
+const HELP_SECTIONS = [
+  {
+    title: "¿Qué son los ORCs?",
+    slug: "que-son-los-orcs",
+    order: 1,
+    content: `<h3>Objetivos y Resultados Clave en Grupo AM</h3>
+<p>Los <strong>ORCs</strong> (Objetivos y Resultados Clave) son el marco de trabajo que utilizamos en Grupo AM para definir, comunicar y alcanzar metas de manera alineada en todos los niveles de la organización.</p>
+
+<h4>¿Qué es un Objetivo?</h4>
+<p>Un <strong>Objetivo</strong> es una declaración cualitativa y motivadora de lo que queremos lograr. Debe ser ambicioso, claro y orientado al impacto. Por ejemplo: <em>"Convertirnos en el medio digital de referencia en México"</em>.</p>
+
+<h4>¿Qué son los Resultados Clave?</h4>
+<p>Los <strong>Resultados Clave (RC)</strong> son métricas cuantificables que nos indican si estamos alcanzando el objetivo. Cada objetivo debe tener entre 2 y 5 RCs. Por ejemplo:</p>
+<ul>
+  <li>Alcanzar 2.5 millones de visitantes únicos mensuales</li>
+  <li>Lograr un tiempo de lectura promedio de 4 minutos</li>
+  <li>Publicar 35 artículos por semana</li>
+</ul>
+
+<h4>¿Por qué usamos ORCs?</h4>
+<ul>
+  <li><strong>Alineación:</strong> Todos los equipos trabajan hacia las mismas metas estratégicas</li>
+  <li><strong>Transparencia:</strong> El progreso es visible para toda la organización</li>
+  <li><strong>Enfoque:</strong> Priorizamos lo que realmente importa</li>
+  <li><strong>Aprendizaje:</strong> Los ciclos cortos nos permiten ajustar rápidamente</li>
+</ul>
+
+<h4>Ciclos y periodos</h4>
+<p>En Grupo AM utilizamos ciclos <strong>trimestrales</strong> para los ORCs de equipo y <strong>anuales</strong> para los ORCs empresariales. Esto nos permite mantener el ritmo sin perder de vista la visión a largo plazo.</p>
+
+<h4>Semáforo de progreso</h4>
+<p>El progreso de cada ORC se muestra con un semáforo de tres colores:</p>
+<ul>
+  <li><span style="color:#15803d;font-weight:600;">Verde (En seguimiento):</span> Avance ≥ 70%</li>
+  <li><span style="color:#b45309;font-weight:600;">Amarillo (En riesgo):</span> Avance entre 60% y 69%</li>
+  <li><span style="color:#b91c1c;font-weight:600;">Rojo (Retrasado):</span> Avance &lt; 60%</li>
+</ul>`,
+  },
+  {
+    title: "Cómo usar esta plataforma",
+    slug: "como-usar-esta-plataforma",
+    order: 2,
+    content: `<h3>Guía de uso por rol</h3>
+<p>La plataforma ORC de Grupo AM está diseñada para que cada miembro de la organización pueda contribuir al seguimiento de los objetivos de manera sencilla.</p>
+
+<h4>Para Miembros de equipo</h4>
+<ol>
+  <li><strong>Accede al dashboard</strong> desde el menú de navegación superior.</li>
+  <li><strong>Selecciona tu equipo</strong> para ver los ORCs activos del periodo.</li>
+  <li><strong>Registra un avance (check-in)</strong> haciendo clic en el botón "Registrar avance" de cada Resultado Clave. Ingresa el valor actual y una nota explicativa.</li>
+  <li>Realiza check-ins <strong>al menos una vez por semana</strong> para mantener el progreso actualizado.</li>
+</ol>
+
+<h4>Para Líderes de equipo</h4>
+<ol>
+  <li><strong>Crea y edita ORCs</strong> para tu equipo desde la vista de equipo.</li>
+  <li><strong>Define Resultados Clave</strong> con valores objetivo claros y medibles.</li>
+  <li><strong>Asigna fuentes de datos</strong> a cada RC para facilitar el seguimiento.</li>
+  <li><strong>Monitorea el progreso</strong> de tu equipo y actúa ante señales de riesgo (semáforo amarillo o rojo).</li>
+  <li>Recibe <strong>recordatorios semanales</strong> por correo si no se han registrado avances.</li>
+</ol>
+
+<h4>Para Ejecutivos y Administradores</h4>
+<ol>
+  <li><strong>Vista empresarial:</strong> Accede a "ORCs Empresariales" para ver los objetivos de toda la organización.</li>
+  <li><strong>Digest ejecutivo:</strong> Recibirás cada lunes un resumen del progreso de todos los equipos por correo.</li>
+  <li><strong>Administración:</strong> Los administradores pueden gestionar usuarios, equipos, notificaciones e importar datos.</li>
+</ol>
+
+<h4>Flujo semanal recomendado</h4>
+<ul>
+  <li><strong>Lunes:</strong> Revisa el digest ejecutivo y planifica la semana</li>
+  <li><strong>Miércoles/Jueves:</strong> Registra avances en tus Resultados Clave</li>
+  <li><strong>Viernes:</strong> Revisa el semáforo del equipo y ajusta prioridades</li>
+</ul>`,
+  },
+  {
+    title: "Preguntas frecuentes",
+    slug: "preguntas-frecuentes",
+    order: 3,
+    content: `<h3>Preguntas frecuentes</h3>
+
+<h4>¿Con qué frecuencia debo registrar avances?</h4>
+<p>Recomendamos registrar avances <strong>al menos una vez por semana</strong>. Si no se registra ningún avance en 7 días, el sistema enviará un recordatorio automático por correo. El seguimiento frecuente es clave para detectar riesgos a tiempo.</p>
+
+<h4>¿Qué hago si mi ORC está en rojo?</h4>
+<p>Un ORC en rojo no es un fracaso — es una señal de alerta temprana. Si tu ORC tiene menos del 60% de avance, te recomendamos:</p>
+<ul>
+  <li>Conversar con tu equipo para identificar bloqueos</li>
+  <li>Ajustar el plan de acción para el resto del período</li>
+  <li>Comunicar la situación a tu líder o al equipo directivo</li>
+  <li>Si es necesario, los administradores pueden ajustar el valor objetivo del RC</li>
+</ul>
+
+<h4>¿Puedo modificar un Resultado Clave una vez creado?</h4>
+<p>Sí, los líderes de equipo y administradores pueden editar los RCs. Sin embargo, se recomienda <strong>no cambiar el valor objetivo a mitad del periodo</strong> sin documentar la razón en una nota de check-in, ya que esto afecta la comparabilidad del progreso histórico.</p>
+
+<h4>¿Cómo se calcula el progreso de un ORC?</h4>
+<p>El progreso del ORC es el <strong>promedio del porcentaje de avance de todos sus Resultados Clave</strong>. Para RCs de tipo porcentaje, el avance es directamente el valor actual dividido entre el valor objetivo. Para RCs numéricos o de moneda, se calcula proporcionalmente entre el valor inicial (baseline) y el objetivo.</p>
+
+<h4>¿Puedo ver los ORCs de otros equipos?</h4>
+<p>Sí. La <strong>vista empresarial</strong> (ORCs Empresariales) muestra el progreso consolidado de todos los equipos de Grupo AM. Esta transparencia es parte del valor del marco ORC: todos pueden ver cómo contribuye cada equipo a los objetivos de la organización.</p>`,
+  },
+  {
+    title: "Documentos de referencia",
+    slug: "documentos-de-referencia",
+    order: 4,
+    content: `<h3>Documentos de referencia</h3>
+<p>En esta sección encontrarás documentos, guías y materiales de apoyo para el trabajo con ORCs en Grupo AM. Los archivos adjuntos pueden descargarse directamente desde esta página.</p>
+<p>Si necesitas agregar documentos a esta sección, contacta a un administrador de la plataforma.</p>`,
+  },
+]
+
+async function seedHelpSections() {
+  console.log("  🌱  Seeding help sections...")
+  for (const section of HELP_SECTIONS) {
+    await prisma.helpSection.upsert({
+      where: { slug: section.slug },
+      update: {
+        title: section.title,
+        order: section.order,
+        content: section.content,
+        isPublished: true,
+      },
+      create: {
+        title: section.title,
+        slug: section.slug,
+        order: section.order,
+        content: section.content,
+        isPublished: true,
+      },
+    })
+    console.log(`    ✓  ${section.title}`)
+  }
+}
+
 const prisma = new PrismaClient()
 
 // ─── Seed data ────────────────────────────────────────────────────────────────
@@ -166,9 +304,10 @@ async function main() {
     })
 
     // 3. Assign lead to team
-    await prisma.user.update({
-      where: { id: lead.id },
-      data: { teamId: team.id },
+    await prisma.userTeam.upsert({
+      where: { userId_teamId: { userId: lead.id, teamId: team.id } },
+      create: { userId: lead.id, teamId: team.id },
+      update: {},
     })
 
     // 4. Clear existing objectives for this team (idempotent re-seed)
@@ -209,6 +348,8 @@ async function main() {
 
     console.log(`  ✓  ${team.name} — ${seedTeam.objectives.length} objectives`)
   }
+
+  await seedHelpSections()
 
   console.log("\n✅  Seed complete.")
 }

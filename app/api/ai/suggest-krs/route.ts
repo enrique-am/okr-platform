@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { openai } from "@/lib/openai"
+import { checkRateLimit } from "@/lib/rate-limit"
 
 const SYSTEM_PROMPT =
   "You are an OKR coach for Grupo AM, a media and news publishing company in León, Guanajuato, Mexico. " +
@@ -20,6 +21,10 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "No autenticado" }, { status: 401 })
   }
 
+  if (!checkRateLimit(`${session.user.id}:suggest-krs`, 20, 60_000)) {
+    return NextResponse.json({ error: "Demasiadas solicitudes. Intenta en un momento." }, { status: 429 })
+  }
+
   let body: { objectiveTitle?: string; teamName?: string }
   try {
     body = await req.json()
@@ -30,6 +35,9 @@ export async function POST(req: NextRequest) {
   const { objectiveTitle, teamName } = body
   if (!objectiveTitle?.trim()) {
     return NextResponse.json({ error: "Parámetros requeridos" }, { status: 400 })
+  }
+  if (objectiveTitle.length > 500) {
+    return NextResponse.json({ error: "El título es demasiado largo (máx. 500 caracteres)" }, { status: 400 })
   }
 
   const userPrompt = `Sugiere 5 resultados clave para el siguiente objetivo del equipo "${teamName ?? ""}": "${objectiveTitle.trim()}"`

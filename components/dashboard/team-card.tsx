@@ -3,6 +3,7 @@
 import { useState } from "react"
 import Link from "next/link"
 import type { TeamData, Objective, KeyResult, OKRStatus } from "@/lib/mock-data"
+import { progressToTrafficLight } from "@/lib/progress"
 
 // ─── Status config ────────────────────────────────────────────────────────────
 
@@ -41,7 +42,15 @@ const TS_CONFIG: Record<
 
 // ─── TeamCard ─────────────────────────────────────────────────────────────────
 
-export function TeamCard({ team }: { team: TeamData }) {
+export function TeamCard({
+  team,
+  canEdit,
+  canCheckin,
+}: {
+  team: TeamData
+  canEdit: boolean
+  canCheckin: boolean
+}) {
   const [expanded, setExpanded] = useState<Record<string, boolean>>({})
 
   function toggle(id: string) {
@@ -106,6 +115,7 @@ export function TeamCard({ team }: { team: TeamData }) {
             objective={obj}
             isOpen={!!expanded[obj.id]}
             onToggle={() => toggle(obj.id)}
+            canEdit={canEdit}
           />
         ))}
       </div>
@@ -126,27 +136,29 @@ export function TeamCard({ team }: { team: TeamData }) {
         </div>
       </div>
 
-      {/* Footer: check-in CTA */}
-      <div className="px-4 pb-4">
-        <Link
-          href={`/dashboard/teams/${team.slug}/checkin`}
-          className="flex items-center justify-center gap-1.5 w-full py-2 rounded-xl text-xs font-semibold text-brand-700 bg-brand-50 hover:bg-brand-100 border border-brand-200 transition-colors"
-        >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            viewBox="0 0 20 20"
-            fill="currentColor"
-            className="w-3.5 h-3.5"
+      {/* Footer: check-in CTA — only shown when user has permission */}
+      {canCheckin && (
+        <div className="px-4 pb-4">
+          <Link
+            href={`/dashboard/teams/${team.slug}/checkin`}
+            className="flex items-center justify-center gap-1.5 w-full py-2 rounded-xl text-xs font-semibold text-brand-700 bg-brand-50 hover:bg-brand-100 border border-brand-200 transition-colors"
           >
-            <path
-              fillRule="evenodd"
-              d="M10 18a8 8 0 100-16 8 8 0 000 16zm.75-11.25a.75.75 0 00-1.5 0v2.5h-2.5a.75.75 0 000 1.5h2.5v2.5a.75.75 0 001.5 0v-2.5h2.5a.75.75 0 000-1.5h-2.5v-2.5z"
-              clipRule="evenodd"
-            />
-          </svg>
-          Registrar avance
-        </Link>
-      </div>
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 20 20"
+              fill="currentColor"
+              className="w-3.5 h-3.5"
+            >
+              <path
+                fillRule="evenodd"
+                clipRule="evenodd"
+                d="M10 18a8 8 0 100-16 8 8 0 000 16zm.75-11.25a.75.75 0 00-1.5 0v2.5h-2.5a.75.75 0 000 1.5h2.5v2.5a.75.75 0 001.5 0v-2.5h2.5a.75.75 0 000-1.5h-2.5v-2.5z"
+              />
+            </svg>
+            Registrar avance
+          </Link>
+        </div>
+      )}
 
     </div>
   )
@@ -158,10 +170,12 @@ function ObjectiveAccordion({
   objective,
   isOpen,
   onToggle,
+  canEdit,
 }: {
   objective: Objective
   isOpen: boolean
   onToggle: () => void
+  canEdit: boolean
 }) {
   const cfg = STATUS_CONFIG[objective.status]
 
@@ -208,22 +222,24 @@ function ObjectiveAccordion({
           {objective.progress}%
         </span>
 
-        {/* Edit link — stops propagation so it doesn't toggle the accordion */}
-        <Link
-          href={`/dashboard/${objective.id}/edit`}
-          onClick={(e) => e.stopPropagation()}
-          className="flex-shrink-0 p-1 -mr-1 text-gray-300 hover:text-brand-500 transition-colors rounded"
-          title="Editar objetivo"
-        >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            viewBox="0 0 20 20"
-            fill="currentColor"
-            className="w-3.5 h-3.5"
+        {/* Edit link — only shown when user has permission */}
+        {canEdit && (
+          <Link
+            href={`/dashboard/${objective.id}/edit`}
+            onClick={(e) => e.stopPropagation()}
+            className="flex-shrink-0 p-1 -mr-1 text-gray-300 hover:text-brand-500 transition-colors rounded"
+            title="Editar objetivo"
           >
-            <path d="M2.695 14.763l-1.262 3.154a.5.5 0 00.65.65l3.155-1.262a4 4 0 001.343-.885L17.5 5.5a2.121 2.121 0 00-3-3L3.58 13.42a4 4 0 00-.885 1.343z" />
-          </svg>
-        </Link>
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 20 20"
+              fill="currentColor"
+              className="w-3.5 h-3.5"
+            >
+              <path d="M2.695 14.763l-1.262 3.154a.5.5 0 00.65.65l3.155-1.262a4 4 0 001.343-.885L17.5 5.5a2.121 2.121 0 00-3-3L3.58 13.42a4 4 0 00-.885 1.343z" />
+            </svg>
+          </Link>
+        )}
       </div>
 
       {/* Progress bar (always visible) */}
@@ -268,7 +284,7 @@ function KRRow({
   objectiveNumber: number
   kr: KeyResult
 }) {
-  const ts = TS_CONFIG[kr.trackingStatus]
+  const ts = TS_CONFIG[progressToTrafficLight(kr.progress)]
 
   const valueLabel =
     kr.type === "BOOLEAN"

@@ -5,16 +5,26 @@ import { revalidatePath } from "next/cache"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { ObjectiveStatus, TrackingStatus, KeyResultType } from "@prisma/client"
+import { logActivity } from "@/lib/activity-log"
+import { canCreateObjective } from "@/lib/permissions"
 
 // ─── Types ────────────────────────────────────────────────────────────────────
+
+export interface DataSourceInput {
+  name: string
+  url: string | null
+  instructions: string | null
+}
 
 export interface KRInput {
   title: string
   type: KeyResultType
   targetValue: number
+  startValue: number | null
   unit: string
   description: string
   trackingStatus: TrackingStatus
+  dataSource: DataSourceInput | null
 }
 
 export interface CreateObjectiveInput {
@@ -58,12 +68,29 @@ export async function createObjective(
   const session = await getServerSession(authOptions)
   if (!session?.user?.id) return { success: false, error: "No autenticado" }
 
+  // ─── Permission check ─────────────────────────────────────────────────────
+  if (!canCreateObjective(session.user)) {
+    return { success: false, error: "Sin permiso para crear objetivos" }
+  }
+  // LEAD can only create objectives for their own teams
+  if (session.user.role === "LEAD") {
+    const isMember = await prisma.userTeam.findUnique({
+      where: { userId_teamId: { userId: session.user.id, teamId: input.teamId } },
+    })
+    if (!isMember) {
+      return { success: false, error: "Solo puedes crear ORCs para tu propio equipo" }
+    }
+  }
+
   // Basic validation
   if (!input.title.trim()) return { success: false, error: "El título es requerido" }
   if (!input.teamId) return { success: false, error: "Selecciona un equipo" }
   if (input.keyResults.length === 0) return { success: false, error: "Agrega al menos un resultado clave" }
   if (input.keyResults.some((kr) => !kr.title.trim())) {
     return { success: false, error: "Todos los resultados clave deben tener un título" }
+  }
+  if (input.keyResults.some((kr) => kr.type !== KeyResultType.BOOLEAN && kr.targetValue <= 0)) {
+    return { success: false, error: "El valor objetivo debe ser mayor que 0" }
   }
 
   const { startDate, endDate } = quarterDates(input.quarter, input.year)
@@ -73,6 +100,7 @@ export async function createObjective(
     const objective = await prisma.objective.create({
       data: {
         title: input.title.trim(),
+        level: "TEAM",
         status: ObjectiveStatus.ACTIVE,
         trackingStatus: objectiveTrackingStatus,
         startDate,
@@ -80,17 +108,40 @@ export async function createObjective(
         ownerId: session.user.id,
         teamId: input.teamId,
         keyResults: {
-          create: input.keyResults.map((kr) => ({
-            title: kr.title.trim(),
-            type: kr.type,
-            targetValue: kr.type === KeyResultType.BOOLEAN ? 1 : kr.targetValue,
-            currentValue: 0,
-            unit: kr.unit.trim() || null,
-            description: kr.description.trim() || null,
-            trackingStatus: kr.trackingStatus,
-          })),
+          create: input.keyResults.map((kr) => {
+            const ds = kr.dataSource
+            const hasDS = ds && ds.name.trim()
+            return {
+              title: kr.title.trim(),
+              type: kr.type,
+              targetValue: kr.type === KeyResultType.BOOLEAN ? 1 : kr.targetValue,
+              startValue: kr.type === KeyResultType.BOOLEAN ? null : (kr.startValue ?? null),
+              currentValue: 0,
+              unit: kr.unit.trim() || null,
+              description: kr.description.trim() || null,
+              trackingStatus: kr.trackingStatus,
+              ...(hasDS ? {
+                dataSource: {
+                  create: {
+                    name: ds!.name.trim(),
+                    url: ds!.url?.trim() || null,
+                    instructions: ds!.instructions?.trim() || null,
+                  },
+                },
+              } : {}),
+            }
+          }),
         },
       },
+    })
+
+    await logActivity(session.user.id, "CREATE_OBJECTIVE", {
+      objectiveId: objective.id,
+      title: input.title.trim(),
+      teamId: input.teamId,
+      ...(session.user.impersonatedBy
+        ? { impersonatedBy: session.user.impersonatedBy }
+        : {}),
     })
 
     revalidatePath("/dashboard")

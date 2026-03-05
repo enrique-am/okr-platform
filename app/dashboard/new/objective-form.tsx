@@ -7,6 +7,8 @@ import type { KRInput } from "./actions"
 import { AiSuggestButton } from "@/components/ai/suggest-button"
 import { SuggestKRsButton } from "@/components/ai/suggest-krs-button"
 import type { KRSuggestion } from "@/components/ai/suggest-krs-button"
+import { DataSourceSection } from "@/components/kr/data-source-section"
+import type { DataSourceValue } from "@/components/kr/data-source-section"
 
 // Local mirrors of the Prisma enums — @prisma/client is server-only and cannot
 // be imported from client components (it's in serverComponentsExternalPackages).
@@ -34,6 +36,7 @@ interface Team {
 
 interface KRState extends KRInput {
   _id: string // local key only
+  dataSource: DataSourceValue
 }
 
 const EMPTY_KR = (): KRState => ({
@@ -41,9 +44,11 @@ const EMPTY_KR = (): KRState => ({
   title: "",
   type: KeyResultType.PERCENTAGE,
   targetValue: 100,
+  startValue: null,
   unit: "%",
   description: "",
   trackingStatus: TrackingStatus.ON_TRACK,
+  dataSource: { name: "", url: "", instructions: "" },
 })
 
 // ─── Label maps ───────────────────────────────────────────────────────────────
@@ -114,9 +119,11 @@ export function ObjectiveForm({ teams }: { teams: Team[] }) {
         title: suggestion.title,
         type: suggestion.type as KeyResultType,
         targetValue: suggestion.type === "BOOLEAN" ? 1 : suggestion.targetValue,
+        startValue: null,
         unit: suggestion.unit,
         description: "",
         trackingStatus: TrackingStatus.ON_TRACK,
+        dataSource: { name: "", url: "", instructions: "" },
       },
     ])
   }
@@ -130,14 +137,24 @@ export function ObjectiveForm({ teams }: { teams: Team[] }) {
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setError(null)
-
+    const badKR = krs.find((kr) => kr.type !== "BOOLEAN" && kr.targetValue <= 0)
+    if (badKR) {
+      setError("El valor objetivo debe ser mayor que 0")
+      return
+    }
     startTransition(async () => {
       const result = await createObjective({
         title,
         teamId,
         quarter,
         year,
-        keyResults: krs.map(({ _id, ...rest }) => rest),
+        keyResults: krs.map(({ _id, dataSource, startValue, ...rest }) => ({
+          ...rest,
+          startValue: startValue,
+          dataSource: dataSource.name.trim()
+            ? { name: dataSource.name.trim(), url: dataSource.url.trim() || null, instructions: dataSource.instructions.trim() || null }
+            : null,
+        })),
       })
 
       if (!result.success) {
@@ -309,6 +326,7 @@ function KRCard({ index, kr, teamName, parentObjective, canRemove, onChange, onR
 
   return (
     <div className="bg-white rounded-2xl border border-gray-100 shadow-sm px-6 py-5 space-y-4">
+
       {/* Header */}
       <div className="flex items-center justify-between">
         <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">
@@ -368,19 +386,49 @@ function KRCard({ index, kr, teamName, parentObjective, canRemove, onChange, onR
         </div>
       </div>
 
+      {/* Start value (hidden for BOOLEAN) */}
+      {!isBoolean && (
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Valor inicial{" "}
+            <span className="font-normal text-gray-400">(opcional)</span>
+          </label>
+          <input
+            type="number"
+            value={kr.startValue ?? ""}
+            onChange={(e) =>
+              onChange({ startValue: e.target.value === "" ? null : Number(e.target.value) })
+            }
+            placeholder="p.ej. 60"
+            step={kr.type === KeyResultType.CURRENCY ? 1000 : 1}
+            className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent"
+          />
+          <p className="text-xs text-gray-400 mt-1">
+            Valor de la métrica antes de iniciar el trimestre.
+          </p>
+        </div>
+      )}
+
       {/* Target value + unit (hidden for BOOLEAN) */}
       {!isBoolean && (
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Valor objetivo</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Valor objetivo <span className="text-red-400">*</span>
+            </label>
             <input
               type="number"
               value={kr.targetValue}
               onChange={(e) => onChange({ targetValue: Number(e.target.value) })}
-              min={0}
+              min={1}
               step={kr.type === KeyResultType.CURRENCY ? 1000 : 1}
-              className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent"
+              className={`w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent ${
+                kr.targetValue <= 0 ? "border-red-300 bg-red-50" : "border-gray-200"
+              }`}
             />
+            {kr.targetValue <= 0 && (
+              <p className="text-xs text-red-500 mt-1">Debe ser mayor que 0</p>
+            )}
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Unidad</label>
@@ -428,6 +476,12 @@ function KRCard({ index, kr, teamName, parentObjective, canRemove, onChange, onR
           className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent resize-none"
         />
       </div>
+
+      {/* Data source */}
+      <DataSourceSection
+        value={kr.dataSource}
+        onChange={(patch) => onChange({ dataSource: { ...kr.dataSource, ...patch } })}
+      />
     </div>
   )
 }

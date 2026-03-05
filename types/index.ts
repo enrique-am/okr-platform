@@ -14,6 +14,9 @@ declare module "next-auth" {
       email?: string | null
       image?: string | null
       role: Role
+      teamIds: string[]
+      hasCompletedOnboarding: boolean
+      impersonatedBy?: { id: string; name: string }
     }
   }
 
@@ -26,5 +29,8 @@ declare module "next-auth/jwt" {
   interface JWT {
     id: string
     role: Role
+    teamIds: string[]
+    hasCompletedOnboarding: boolean
+    impersonatedBy?: { id: string; name: string }
   }
 }
