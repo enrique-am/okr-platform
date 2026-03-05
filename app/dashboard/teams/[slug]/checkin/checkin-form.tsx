@@ -39,7 +39,7 @@ export interface ObjectiveGroup {
 }
 
 interface EntryState {
-  newValue: number
+  newValue: number | null  // null = not touched; will be skipped on submit
   originalValue: number
   notes: string
 }
@@ -141,12 +141,14 @@ export function CheckInForm({
   }, [])
 
   // Build initial state: one entry per KR keyed by kr.id
+  // Boolean KRs pre-populate with currentValue (no "empty" state makes sense).
+  // Numeric KRs start as null (empty) so users must actively enter a value.
   const [entries, setEntries] = useState<Record<string, EntryState>>(() => {
     const init: Record<string, EntryState> = {}
     for (const g of groups) {
       for (const kr of g.krs) {
         init[kr.id] = {
-          newValue: kr.currentValue,
+          newValue: kr.type === KRType.BOOLEAN ? kr.currentValue : null,
           originalValue: kr.currentValue,
           notes: "",
         }
@@ -164,9 +166,14 @@ export function CheckInForm({
     setError(null)
 
     startTransition(async () => {
+      // Only submit entries where the user actually entered a value (newValue !== null)
+      const toSubmit = Object.entries(entries)
+        .filter(([, e]) => e.newValue !== null)
+        .map(([krId, e]) => ({ krId, newValue: e.newValue as number, originalValue: e.originalValue, notes: e.notes }))
+
       const result = await submitCheckIn({
         teamSlug,
-        entries: Object.entries(entries).map(([krId, e]) => ({ krId, ...e })),
+        entries: toSubmit,
       })
 
       if (!result.success) {
@@ -204,6 +211,7 @@ export function CheckInForm({
   }
 
   const totalKRs = groups.reduce((s, g) => s + g.krs.length, 0)
+  const filledKRs = Object.values(entries).filter((e) => e.newValue !== null).length
 
   return (
     <>
@@ -212,11 +220,11 @@ export function CheckInForm({
           {groups.map((group) => (
             <section key={group.objectiveNumber}>
               {/* Objective header */}
-              <div className="flex items-center gap-2 mb-3">
-                <span className="inline-flex items-center px-2.5 py-0.5 rounded-lg text-xs font-bold bg-gray-100 text-gray-500 tabular-nums">
+              <div className="flex items-start gap-2 mb-3">
+                <span className="inline-flex items-center px-2.5 py-0.5 rounded-lg text-xs font-bold bg-gray-100 text-gray-500 tabular-nums flex-shrink-0 mt-px">
                   ORC {group.objectiveNumber}
                 </span>
-                <p className="text-sm font-medium text-gray-700 leading-snug line-clamp-1 min-w-0">
+                <p className="text-sm font-medium text-gray-700 leading-snug min-w-0">
                   {group.objectiveTitle}
                 </p>
               </div>
@@ -225,9 +233,14 @@ export function CheckInForm({
               <div className="space-y-3">
                 {group.krs.map((kr) => {
                   const entry = entries[kr.id]
-                  const progress = calcProgress(kr.type, entry.newValue, kr.targetValue, kr.startValue)
                   const isBoolean = kr.type === KRType.BOOLEAN
-                  const changed = entry.newValue !== entry.originalValue
+                  // For display: use entered value if present, otherwise fall back to currentValue
+                  const displayValue = entry.newValue ?? kr.currentValue
+                  const progress = calcProgress(kr.type, displayValue, kr.targetValue, kr.startValue)
+                  // A card is "changed" when a value has been entered (non-null) and differs from original, or for booleans when toggled
+                  const changed = isBoolean
+                    ? entry.newValue !== entry.originalValue
+                    : entry.newValue !== null
 
                   return (
                     <div
@@ -322,9 +335,14 @@ export function CheckInForm({
 
                       {/* Value input */}
                       <div>
-                        <label className="block text-xs font-medium text-gray-600 mb-1.5">
-                          Nuevo valor
-                        </label>
+                        <div className="flex items-center justify-between mb-1.5">
+                          <label className="block text-xs font-medium text-gray-600">
+                            Nuevo valor
+                          </label>
+                          {!isBoolean && entry.newValue === null && (
+                            <span className="text-xs text-gray-400 italic">Sin cambios</span>
+                          )}
+                        </div>
                         {isBoolean ? (
                           <div className="flex gap-2">
                             {[
@@ -349,13 +367,16 @@ export function CheckInForm({
                           <div className="flex items-center gap-2">
                             <input
                               type="number"
-                              value={entry.newValue}
+                              value={entry.newValue ?? ""}
                               onChange={(e) =>
-                                update(kr.id, { newValue: Number(e.target.value) })
+                                update(kr.id, {
+                                  newValue: e.target.value === "" ? null : Number(e.target.value),
+                                })
                               }
                               min={0}
-                              step={kr.type === KRType.CURRENCY ? 1000 : 1}
-                              className="flex-1 rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent"
+                              step={kr.type === KRType.CURRENCY ? 1000 : "any"}
+                              placeholder="Ingresa el valor actual..."
+                              className="flex-1 rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent placeholder:text-gray-300"
                             />
                             {kr.unit && (
                               <span className="text-sm text-gray-400 flex-shrink-0">{kr.unit}</span>
@@ -409,7 +430,9 @@ export function CheckInForm({
           >
             {isPending
               ? "Guardando…"
-              : `Guardar avance · ${totalKRs} ${totalKRs === 1 ? "RC" : "RCs"}`}
+              : filledKRs === 0
+              ? "Guardar avance"
+              : `Guardar avance · ${filledKRs} ${filledKRs === 1 ? "RC" : "RCs"}`}
           </button>
         </div>
       </form>

@@ -4,6 +4,7 @@ import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { AppLayout } from "@/components/layout/app-layout"
 import { HelpSidebar } from "./help-sidebar"
+import { HelpPillNav } from "./help-pill-nav"
 import DOMPurify from "isomorphic-dompurify"
 
 export const metadata = {
@@ -37,6 +38,9 @@ export default async function AyudaPage() {
         </p>
       </div>
 
+      {/* Mobile pill nav — rendered above the flex row, hidden on lg+ */}
+      <HelpPillNav sections={sections.map((s) => ({ slug: s.slug, title: s.title }))} />
+
       <div className="flex gap-8">
         {/* Sidebar */}
         <aside className="hidden lg:block w-56 flex-shrink-0">
@@ -48,7 +52,7 @@ export default async function AyudaPage() {
         {/* Main content */}
         <main className="flex-1 min-w-0 space-y-12">
           {sections.map((section) => (
-            <section key={section.id} id={section.slug} className="scroll-mt-20">
+            <section key={section.id} id={section.slug} className="scroll-mt-[120px] lg:scroll-mt-20">
               <div className="border-b border-gray-200 pb-3 mb-6">
                 <h2 className="text-xl font-bold text-gray-900">{section.title}</h2>
               </div>

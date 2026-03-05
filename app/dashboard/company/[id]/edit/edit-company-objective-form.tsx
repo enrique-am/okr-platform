@@ -455,7 +455,7 @@ function KRCard({
               onChange({ startValue: e.target.value === "" ? null : Number(e.target.value) })
             }
             placeholder="p.ej. 60"
-            step={kr.type === "CURRENCY" ? 1000 : 1}
+            step={kr.type === "CURRENCY" ? 1000 : "any"}
             className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent"
           />
           <p className="text-xs text-gray-400 mt-1">
@@ -475,6 +475,7 @@ function KRCard({
               value={kr.targetValue}
               onChange={(e) => onChange({ targetValue: Number(e.target.value) })}
               min={1}
+              step="any"
               className={`w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent ${
                 kr.targetValue <= 0 ? "border-red-300 bg-red-50" : "border-gray-200"
               }`}
@@ -490,6 +491,7 @@ function KRCard({
               value={kr.currentValue}
               onChange={(e) => onChange({ currentValue: Number(e.target.value) })}
               min={0}
+              step="any"
               className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent"
             />
           </div>

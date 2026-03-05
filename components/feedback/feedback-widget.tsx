@@ -71,7 +71,7 @@ export function FeedbackWidget({ userName, userEmail, userRole, teamName }: Feed
       <button
         onClick={handleOpen}
         title="Enviar comentario o reportar un error"
-        className="fixed bottom-6 right-6 z-40 w-12 h-12 rounded-full bg-brand-500 hover:bg-brand-600 active:scale-95 text-white shadow-lg hover:shadow-xl transition-all flex items-center justify-center text-xl select-none"
+        className="fixed bottom-20 right-6 sm:bottom-6 z-40 w-12 h-12 rounded-full bg-brand-500 hover:bg-brand-600 active:scale-95 text-white shadow-lg hover:shadow-xl transition-all flex items-center justify-center text-xl select-none"
         aria-label="Abrir panel de comentarios"
       >
         💬

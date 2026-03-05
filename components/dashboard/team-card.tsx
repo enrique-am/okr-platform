@@ -183,7 +183,7 @@ function ObjectiveAccordion({
     <div className="rounded-xl border border-gray-100 overflow-hidden">
       {/* Header row — click to expand */}
       <div
-        className="flex items-center gap-2 px-3 py-2.5 cursor-pointer select-none hover:bg-gray-50 transition-colors"
+        className="flex items-start gap-2 px-3 py-2.5 cursor-pointer select-none hover:bg-gray-50 transition-colors"
         onClick={onToggle}
         role="button"
         aria-expanded={isOpen}
@@ -193,7 +193,7 @@ function ObjectiveAccordion({
           xmlns="http://www.w3.org/2000/svg"
           viewBox="0 0 20 20"
           fill="currentColor"
-          className={`w-3 h-3 text-gray-400 flex-shrink-0 transition-transform duration-200 ${
+          className={`w-3 h-3 text-gray-400 flex-shrink-0 mt-0.5 transition-transform duration-200 ${
             isOpen ? "rotate-90" : ""
           }`}
         >
@@ -205,20 +205,20 @@ function ObjectiveAccordion({
         </svg>
 
         {/* OKR label */}
-        <span className="text-xs font-bold text-gray-400 flex-shrink-0 tabular-nums">
+        <span className="text-xs font-bold text-gray-400 flex-shrink-0 tabular-nums mt-0.5">
           ORC {objective.number}
         </span>
 
         {/* Title */}
-        <p className="text-sm font-medium text-gray-800 leading-snug flex-1 min-w-0 truncate">
+        <p className="text-sm font-medium text-gray-800 leading-snug flex-1 min-w-0">
           {objective.title}
         </p>
 
         {/* Status dot */}
-        <span className={`w-2 h-2 rounded-full flex-shrink-0 ${cfg.dot}`} />
+        <span className={`w-2 h-2 rounded-full flex-shrink-0 mt-1 ${cfg.dot}`} />
 
         {/* Progress */}
-        <span className="text-xs font-semibold text-gray-500 flex-shrink-0 tabular-nums w-8 text-right">
+        <span className="text-xs font-semibold text-gray-500 flex-shrink-0 tabular-nums w-8 text-right mt-0.5">
           {objective.progress}%
         </span>
 
@@ -296,11 +296,11 @@ function KRRow({
   return (
     <div className="pl-5">
       {/* KR number + title */}
-      <div className="flex items-baseline gap-1.5 mb-1">
-        <span className="text-xs font-bold text-gray-400 flex-shrink-0 tabular-nums">
+      <div className="flex items-start gap-1.5 mb-1">
+        <span className="text-xs font-bold text-gray-400 flex-shrink-0 tabular-nums mt-px">
           RC {objectiveNumber}.{kr.number}
         </span>
-        <span className="text-xs text-gray-700 leading-snug line-clamp-1 min-w-0">
+        <span className="text-xs text-gray-700 leading-snug min-w-0">
           {kr.title}
         </span>
       </div>

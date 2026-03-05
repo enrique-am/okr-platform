@@ -11,6 +11,10 @@ const inter = Inter({ subsets: ["latin"] })
 export const metadata: Metadata = {
   title: "OKR Platform – Grupo AM",
   description: "Internal OKR tracking platform for Grupo AM",
+  icons: {
+    icon: "/favicon.ico",
+    apple: "/apple-touch-icon.png",
+  },
 }
 
 export default function RootLayout({
