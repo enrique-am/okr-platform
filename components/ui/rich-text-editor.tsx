@@ -37,21 +37,22 @@ export function RichTextEditor({ value, onChange }: RichTextEditorProps) {
   })
 
   if (!editor) return null
+  const ed = editor
 
   function addLink() {
-    const prev = editor.getAttributes("link").href ?? ""
+    const prev = ed.getAttributes("link").href ?? ""
     const url = window.prompt("URL del enlace:", prev)
     if (url === null) return
     if (url === "") {
-      editor.chain().focus().unsetLink().run()
+      ed.chain().focus().unsetLink().run()
     } else {
-      editor.chain().focus().setLink({ href: url }).run()
+      ed.chain().focus().setLink({ href: url }).run()
     }
   }
 
   function addImage() {
     const url = window.prompt("URL de la imagen:")
-    if (url) editor.chain().focus().setImage({ src: url }).run()
+    if (url) ed.chain().focus().setImage({ src: url }).run()
   }
 
   type BtnProps = {

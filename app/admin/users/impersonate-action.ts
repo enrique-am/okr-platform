@@ -36,7 +36,9 @@ export async function startImpersonation(targetUserId: string) {
   if (target.role === "ADMIN") return { success: false, error: "No puedes impersonar a otro administrador" }
   if (target.status === "INACTIVE") return { success: false, error: "No puedes impersonar a un usuario inactivo" }
 
-  const secret = process.env.NEXTAUTH_SECRET!
+  const secret = process.env.NEXTAUTH_SECRET
+  if (!secret) return { success: false, error: "Configuración del servidor incompleta" }
+
   const jar = cookies()
 
   // Save the admin's current raw session token as a backup

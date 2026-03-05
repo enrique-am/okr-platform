@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { openai } from "@/lib/openai"
+import { checkRateLimit } from "@/lib/rate-limit"
 
 // ─── System prompt ────────────────────────────────────────────────────────────
 
@@ -54,6 +55,10 @@ export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions)
   if (!session || session.user.role !== "ADMIN") {
     return NextResponse.json({ error: "No autorizado" }, { status: 401 })
+  }
+
+  if (!checkRateLimit(`${session.user.id}:parse-csv`, 5, 60_000)) {
+    return NextResponse.json({ error: "Demasiadas solicitudes. Intenta en un momento." }, { status: 429 })
   }
 
   let body: { csvText?: string }

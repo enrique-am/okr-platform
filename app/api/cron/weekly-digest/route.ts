@@ -10,6 +10,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "No autorizado" }, { status: 401 })
   }
 
+  try {
   // Check notification settings
   const settings = await prisma.notificationSettings.findFirst()
   if (settings && !settings.weeklyDigestEnabled) {
@@ -100,4 +101,8 @@ export async function POST(req: NextRequest) {
   }
 
   return NextResponse.json({ ok: true, sent, failed, teams: teamSummaries.length })
+  } catch (err) {
+    console.error("[weekly-digest] Fatal error:", err)
+    return NextResponse.json({ error: "Error interno del servidor" }, { status: 500 })
+  }
 }

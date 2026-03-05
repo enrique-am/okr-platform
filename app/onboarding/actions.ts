@@ -20,7 +20,8 @@ export async function completeOnboarding(destination: string = "/dashboard") {
   // Re-encode the JWT with hasCompletedOnboarding: true so middleware
   // doesn't redirect back to /onboarding on the very next request.
   // Same pattern as impersonate-action.ts.
-  const secret = process.env.NEXTAUTH_SECRET!
+  const secret = process.env.NEXTAUTH_SECRET
+  if (!secret) redirect(destination)
   const jar = cookies()
   const rawToken = jar.get(SESSION_COOKIE)?.value
 

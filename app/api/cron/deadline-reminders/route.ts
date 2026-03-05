@@ -10,6 +10,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "No autorizado" }, { status: 401 })
   }
 
+  try {
   // Check notification settings
   const settings = await prisma.notificationSettings.findFirst()
   if (settings && !settings.deadlineReminderEnabled) {
@@ -103,4 +104,8 @@ export async function POST(req: NextRequest) {
   }
 
   return NextResponse.json({ ok: true, sent, failed })
+  } catch (err) {
+    console.error("[deadline-reminders] Fatal error:", err)
+    return NextResponse.json({ error: "Error interno del servidor" }, { status: 500 })
+  }
 }

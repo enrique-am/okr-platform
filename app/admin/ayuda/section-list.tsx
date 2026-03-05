@@ -54,7 +54,7 @@ export function SectionList({ initialSections }: SectionListProps) {
     setDragId(null)
     setDragOverId(null)
 
-    startTransition(() => reorderSections(updated.map((s) => s.id)))
+    startTransition(() => void reorderSections(updated.map((s) => s.id)))
   }
 
   function handleDragEnd() {
@@ -67,13 +67,13 @@ export function SectionList({ initialSections }: SectionListProps) {
     setSections((prev) =>
       prev.map((s) => (s.id === id ? { ...s, isPublished: !current } : s))
     )
-    startTransition(() => togglePublish(id, !current))
+    startTransition(() => void togglePublish(id, !current))
   }
 
   function handleDelete(id: string) {
     if (!confirm("¿Eliminar esta sección? También se eliminarán todos sus documentos adjuntos.")) return
     setSections((prev) => prev.filter((s) => s.id !== id))
-    startTransition(() => deleteSection(id))
+    startTransition(() => void deleteSection(id))
   }
 
   const editingSection = sections.find((s) => s.id === editingId) ?? null

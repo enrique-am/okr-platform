@@ -32,58 +32,63 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "La captura de pantalla excede el tamaño máximo de 2 MB" }, { status: 400 })
   }
 
-  // Fetch the submitting user's details for the email
-  const user = await prisma.user.findUnique({
-    where: { id: session.user.id },
-    select: {
-      name: true,
-      email: true,
-      role: true,
-      userTeams: { take: 1, select: { team: { select: { name: true } } } },
-    },
-  })
+  try {
+    // Fetch the submitting user's details for the email
+    const user = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: {
+        name: true,
+        email: true,
+        role: true,
+        userTeams: { take: 1, select: { team: { select: { name: true } } } },
+      },
+    })
 
-  const report = await prisma.feedbackReport.create({
-    data: {
-      type: type as FeedbackType,
-      title: title?.trim() || null,
-      description: description.trim(),
-      stepsToReproduce: stepsToReproduce?.trim() || null,
-      screenshotBase64: screenshotBase64 || null,
-      priority: priority ? (priority as FeedbackPriority) : null,
-      pageUrl,
-      userAgent: userAgent ?? "",
-      userId: session.user.id,
-    },
-  })
-
-  // Notify all active admins
-  const admins = await prisma.user.findMany({
-    where: { role: Role.ADMIN, status: UserStatus.ACTIVE },
-    select: { email: true },
-  })
-
-  await Promise.allSettled(
-    admins.map((admin) =>
-      sendFeedbackEmail(admin.email, {
-        type: type as "BUG" | "FEATURE",
+    const report = await prisma.feedbackReport.create({
+      data: {
+        type: type as FeedbackType,
         title: title?.trim() || null,
         description: description.trim(),
         stepsToReproduce: stepsToReproduce?.trim() || null,
         screenshotBase64: screenshotBase64 || null,
-        priority: priority || null,
+        priority: priority ? (priority as FeedbackPriority) : null,
         pageUrl,
         userAgent: userAgent ?? "",
-        submittedBy: {
-          name: user?.name ?? null,
-          email: user?.email ?? session.user.email ?? "",
-          role: user?.role ?? session.user.role ?? "",
-          teamName: user?.userTeams[0]?.team?.name ?? null,
-        },
-        createdAt: report.createdAt,
-      })
-    )
-  )
+        userId: session.user.id,
+      },
+    })
 
-  return NextResponse.json({ ok: true, id: report.id })
+    // Notify all active admins
+    const admins = await prisma.user.findMany({
+      where: { role: Role.ADMIN, status: UserStatus.ACTIVE },
+      select: { email: true },
+    })
+
+    await Promise.allSettled(
+      admins.map((admin) =>
+        sendFeedbackEmail(admin.email, {
+          type: type as "BUG" | "FEATURE",
+          title: title?.trim() || null,
+          description: description.trim(),
+          stepsToReproduce: stepsToReproduce?.trim() || null,
+          screenshotBase64: screenshotBase64 || null,
+          priority: priority || null,
+          pageUrl,
+          userAgent: userAgent ?? "",
+          submittedBy: {
+            name: user?.name ?? null,
+            email: user?.email ?? session.user.email ?? "",
+            role: user?.role ?? session.user.role ?? "",
+            teamName: user?.userTeams[0]?.team?.name ?? null,
+          },
+          createdAt: report.createdAt,
+        })
+      )
+    )
+
+    return NextResponse.json({ ok: true, id: report.id })
+  } catch (e) {
+    console.error("feedback POST error:", e)
+    return NextResponse.json({ error: "Error al guardar el reporte" }, { status: 500 })
+  }
 }
