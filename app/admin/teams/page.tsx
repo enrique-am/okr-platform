@@ -40,7 +40,7 @@ export default async function AdminTeamsPage() {
   }))
 
   return (
-    <AppLayout breadcrumbs={[{ label: "Admin", href: "/admin" }, { label: "Equipos" }]}>
+    <AppLayout maxWidth="w-[1120px]">
       <AdminNav />
       <TeamsTable teams={serialized} />
     </AppLayout>

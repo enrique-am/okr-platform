@@ -74,7 +74,7 @@ export default async function AdminActivityPage({
   }))
 
   return (
-    <AppLayout breadcrumbs={[{ label: "Admin", href: "/admin" }, { label: "Actividad" }]}>
+    <AppLayout maxWidth="w-[1120px]">
       <AdminNav />
       <ActivityTable
         logs={serializedLogs}

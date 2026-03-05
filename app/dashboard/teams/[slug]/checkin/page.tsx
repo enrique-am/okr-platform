@@ -86,11 +86,6 @@ export default async function CheckInPage({ params }: { params: { slug: string }
 
   return (
     <AppLayout
-      breadcrumbs={[
-        { label: "Dashboard", href: "/dashboard" },
-        { label: team.name, href: `/dashboard/teams/${team.slug}` },
-        { label: "Registrar avance" },
-      ]}
       maxWidth="max-w-2xl"
     >
       <div className="mb-6">

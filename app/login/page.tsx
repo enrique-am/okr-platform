@@ -2,9 +2,10 @@ import { getServerSession } from "next-auth"
 import { redirect } from "next/navigation"
 import { authOptions } from "@/lib/auth"
 import { SignInButton } from "@/components/auth/sign-in-button"
+import Image from "next/image"
 
 export const metadata = {
-  title: "Iniciar sesión – OKR Platform",
+  title: "Iniciar sesión – Objetivos y Resultados Clave",
 }
 
 export default async function LoginPage({
@@ -23,16 +24,11 @@ export default async function LoginPage({
 
         {/* Wordmark */}
         <div className="flex flex-col items-center mb-8">
-          <div className="flex items-center gap-2.5 mb-2">
-            <div className="w-8 h-8 rounded-lg bg-brand-500 flex items-center justify-center flex-shrink-0">
-              <span className="text-white font-bold text-sm leading-none">G</span>
-            </div>
-            <span className="text-xl font-semibold text-gray-900 tracking-tight">
-              Grupo AM
-            </span>
+          <div className="mb-2">
+            <Image src="/logo-login.png" alt="Grupo AM" width={220} height={220} />
           </div>
           <span className="text-sm text-gray-400 tracking-wide uppercase">
-            OKR Platform
+            Objetivos y Resultados Clave
           </span>
         </div>
 

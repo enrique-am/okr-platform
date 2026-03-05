@@ -109,10 +109,10 @@ export function TeamsTable({ teams }: { teams: TeamRow[] }) {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
 
       {/* ── Create team form ── */}
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm px-6 py-5">
+      <div className="px-6 py-5 border-b border-gray-100">
         <h3 className="text-sm font-semibold text-gray-700 mb-3">Nuevo equipo</h3>
         <div className="flex gap-3 flex-wrap">
           <input
@@ -137,7 +137,7 @@ export function TeamsTable({ teams }: { teams: TeamRow[] }) {
       </div>
 
       {/* ── Teams table ── */}
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+      <div className="overflow-hidden">
         <div className="px-6 py-4 border-b border-gray-100">
           <h2 className="text-sm font-semibold text-gray-700">
             Equipos{" "}

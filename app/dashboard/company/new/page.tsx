@@ -24,11 +24,6 @@ export default async function NewCompanyObjectivePage() {
 
   return (
     <AppLayout
-      breadcrumbs={[
-        { label: "Dashboard", href: "/dashboard" },
-        { label: "Empresa", href: "/dashboard/company" },
-        { label: "Nuevo ORC Empresarial" },
-      ]}
       maxWidth="max-w-3xl"
     >
       <div className="mb-6">

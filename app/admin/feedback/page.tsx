@@ -84,9 +84,9 @@ export default async function AdminFeedbackPage({
   }))
 
   return (
-    <AppLayout breadcrumbs={[{ label: "Admin", href: "/admin" }, { label: "Feedback" }]}>
+    <AppLayout maxWidth="w-[1120px]">
       <AdminNav />
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex items-center justify-between mb-6">
         <h1 className="text-lg font-semibold text-gray-900">
           Feedback
           {unreadCount > 0 && (

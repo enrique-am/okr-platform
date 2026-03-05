@@ -438,7 +438,7 @@ export function ImportClient({
 
   if (phase === "configure") {
     return (
-      <div className="max-w-xl">
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
         {/* Mode toggle */}
         <div className="mb-6">
           <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -623,7 +623,7 @@ export function ImportClient({
 
   if (phase === "preview") {
     return (
-      <div>
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
         {/* Summary bar */}
         <div className="flex items-center gap-3 mb-6 flex-wrap text-sm">
           <span className="font-medium text-gray-700">
@@ -809,7 +809,7 @@ export function ImportClient({
 
   if (phase === "success" && successData) {
     return (
-      <div className="max-w-md py-8">
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-8">
         <div className="text-5xl mb-4">✅</div>
         <h2 className="text-xl font-bold text-gray-900 mb-2">
           ¡Importación exitosa!

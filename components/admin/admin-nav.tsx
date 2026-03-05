@@ -10,6 +10,7 @@ const TABS = [
   { href: "/admin/feedback", label: "Feedback" },
   { href: "/admin/notifications", label: "Notificaciones" },
   { href: "/admin/import", label: "Importar" },
+  { href: "/admin/ayuda", label: "Ayuda" },
 ]
 
 export function AdminNav() {

@@ -74,11 +74,6 @@ export default async function EditCompanyObjectivePage({
 
   return (
     <AppLayout
-      breadcrumbs={[
-        { label: "Dashboard", href: "/dashboard" },
-        { label: "Empresa", href: "/dashboard/company" },
-        { label: `Editar ORC ${objectiveNumber ?? ""}` },
-      ]}
       maxWidth="max-w-3xl"
     >
       <div className="mb-6">

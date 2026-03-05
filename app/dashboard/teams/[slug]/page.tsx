@@ -147,10 +147,6 @@ export default async function TeamPage({ params }: { params: { slug: string } })
 
   return (
     <AppLayout
-      breadcrumbs={[
-        { label: "Dashboard", href: "/dashboard" },
-        { label: team.name },
-      ]}
       maxWidth="max-w-4xl"
     >
       {/* Team header */}

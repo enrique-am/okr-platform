@@ -23,10 +23,11 @@ function emailWrapper(content: string): string {
           <!-- Logo / header -->
           <tr>
             <td style="text-align:center;padding-bottom:24px;">
-              <div style="display:inline-block;background-color:#72bf44;width:44px;height:44px;border-radius:12px;text-align:center;line-height:44px;">
-                <span style="color:#ffffff;font-weight:700;font-size:22px;line-height:44px;">G</span>
+              <div style="display:inline-flex;align-items:center;gap:10px;justify-content:center;">
+                <img src="${APP_URL}/logo.png" alt="Grupo AM" width="32" height="32" style="display:inline-block;vertical-align:middle;" />
+                <span style="font-size:18px;font-weight:700;color:#111827;letter-spacing:-0.3px;vertical-align:middle;">Grupo AM</span>
               </div>
-              <p style="margin:10px 0 0;font-size:11px;color:#9ca3af;text-transform:uppercase;letter-spacing:2px;font-weight:600;">Grupo AM &nbsp;·&nbsp; Sistema ORC</p>
+              <p style="margin:8px 0 0;font-size:11px;color:#9ca3af;text-transform:uppercase;letter-spacing:2px;font-weight:600;">Sistema ORC</p>
             </td>
           </tr>
 

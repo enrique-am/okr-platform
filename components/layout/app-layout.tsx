@@ -6,6 +6,7 @@ import { Navbar } from "./navbar"
 import { Breadcrumb, type BreadcrumbItem } from "./breadcrumb"
 import { ImpersonationBanner } from "./impersonation-banner"
 import { FeedbackWidget } from "@/components/feedback/feedback-widget"
+import { Footer } from "./footer"
 
 interface AppLayoutProps {
   children: ReactNode
@@ -32,15 +33,16 @@ export async function AppLayout({
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 flex flex-col">
       <ImpersonationBanner />
       <Navbar />
-      <main className={`${maxWidth} mx-auto px-4 sm:px-6 py-8`}>
+      <main className={`${maxWidth} mx-auto px-4 sm:px-6 py-8 flex-1`}>
         {breadcrumbs && breadcrumbs.length > 0 && (
           <Breadcrumb items={breadcrumbs} />
         )}
         {children}
       </main>
+      <Footer />
 
       {session?.user && (
         <FeedbackWidget

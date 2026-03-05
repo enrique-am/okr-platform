@@ -97,16 +97,8 @@ export default async function EditObjectivePage({
 
   const okrLabel = objectiveNumber != null ? `ORC ${objectiveNumber}` : "ORC"
 
-  const breadcrumbs = [
-    { label: "Dashboard", href: "/dashboard" },
-    ...(objective.team
-      ? [{ label: objective.team.name, href: `/dashboard/teams/${objective.team.slug}` }]
-      : []),
-    { label: `Editar ${okrLabel}` },
-  ]
-
   return (
-    <AppLayout breadcrumbs={breadcrumbs} maxWidth="max-w-3xl">
+    <AppLayout maxWidth="max-w-3xl">
       <div className="mb-6">
         <div className="flex items-center gap-2 mb-1">
           <span className="inline-flex items-center px-2.5 py-0.5 rounded-lg text-xs font-bold bg-gray-100 text-gray-500">

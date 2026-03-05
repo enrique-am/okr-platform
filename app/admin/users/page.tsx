@@ -54,7 +54,7 @@ export default async function AdminUsersPage({
   }))
 
   return (
-    <AppLayout breadcrumbs={[{ label: "Admin", href: "/admin" }, { label: "Usuarios" }]}>
+    <AppLayout maxWidth="w-[1120px]">
       <AdminNav />
       <UsersTable
         users={serialized}

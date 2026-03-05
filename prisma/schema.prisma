@@ -79,6 +79,7 @@ model User {
   feedbackReports  FeedbackReport[]
   ledTeams         Team[]           @relation("TeamLead")
   notificationSettingsUpdates NotificationSettings[]
+  helpSectionsUpdated         HelpSection[]          @relation("HelpSectionUpdatedBy")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -257,6 +258,36 @@ model NotificationSettings {
   updatedAt   DateTime @updatedAt
   updatedById String?
   updatedBy   User?    @relation(fields: [updatedById], references: [id], onDelete: SetNull)
+}
+
+// ─── Help Center ──────────────────────────────────────────────────────────────
+
+model HelpSection {
+  id          String         @id @default(cuid())
+  title       String
+  slug        String         @unique
+  order       Int
+  content     String         @db.Text
+  isPublished Boolean        @default(true)
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+  updatedById String?
+  updatedBy   User?          @relation("HelpSectionUpdatedBy", fields: [updatedById], references: [id])
+  documents   HelpDocument[]
+}
+
+model HelpDocument {
+  id        String      @id @default(cuid())
+  sectionId String
+  section   HelpSection @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+  title     String
+  filename  String
+  mimeType  String
+  fileData  Bytes
+  fileSize  Int
+  order     Int
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
 }
 
 // ─── NextAuth Required Models ─────────────────────────────────────────────────

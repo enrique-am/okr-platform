@@ -1,8 +1,10 @@
 import { getServerSession } from "next-auth"
 import Link from "next/link"
+import Image from "next/image"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { SignOutButton } from "@/components/auth/sign-out-button"
+import { NavLinks } from "./nav-links"
 
 const ROLE_LABELS: Record<string, string> = {
   ADMIN: "Admin",
@@ -32,6 +34,14 @@ export async function Navbar() {
     }
   }
 
+  const teamIds = user?.teamIds ?? []
+  const isLimited = role !== "ADMIN" && role !== "EXECUTIVE"
+  const teams = await prisma.team.findMany({
+    where: isLimited && teamIds.length > 0 ? { id: { in: teamIds } } : isLimited ? { id: "none" } : undefined,
+    select: { id: true, name: true, slug: true },
+    orderBy: { name: "asc" },
+  })
+
   return (
     <nav className="bg-white border-b border-gray-200 sticky top-0 z-30">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between gap-4">
@@ -41,46 +51,18 @@ export async function Navbar() {
           href="/dashboard"
           className="flex items-center gap-2 flex-shrink-0 hover:opacity-80 transition-opacity"
         >
-          <div className="w-7 h-7 rounded-md bg-brand-500 flex items-center justify-center flex-shrink-0">
-            <span className="text-white font-bold text-xs leading-none">G</span>
-          </div>
+          <Image src="/logo.png" alt="Grupo AM" width={28} height={28} className="flex-shrink-0" />
           <span className="text-sm font-bold text-brand-600 tracking-tight">
             Grupo AM ORCs
           </span>
         </Link>
 
-        {/* Center: nav links */}
-        <div className="hidden sm:flex items-center gap-1">
-          <Link
-            href="/dashboard"
-            className="px-3 py-1.5 text-sm font-medium text-gray-600 hover:text-brand-600 hover:bg-gray-50 rounded-lg transition-colors"
-          >
-            Dashboard
-          </Link>
-          <Link
-            href="/dashboard/company"
-            className="px-3 py-1.5 text-sm font-medium text-gray-600 hover:text-brand-600 hover:bg-gray-50 rounded-lg transition-colors"
-          >
-            Empresa
-          </Link>
-          {role === "ADMIN" && (
-            <Link
-              href="/admin"
-              className="relative px-3 py-1.5 text-sm font-medium text-gray-600 hover:text-brand-600 hover:bg-gray-50 rounded-lg transition-colors flex items-center gap-1.5"
-            >
-              Admin
-              {unreadFeedback > 0 && (
-                <span className="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-red-500 text-white text-[10px] font-bold leading-none">
-                  {unreadFeedback > 99 ? "99+" : unreadFeedback}
-                </span>
-              )}
-            </Link>
-          )}
-        </div>
+        {/* Center: nav links (client component for active state + icons) */}
+        <NavLinks role={role} unreadFeedback={unreadFeedback} userName={user?.name ?? null} teams={teams} />
 
-        {/* Right: user info + sign out */}
+        {/* Right: user info + sign out (desktop only — mobile uses burger menu) */}
         {user && (
-          <div className="flex items-center gap-3 flex-shrink-0">
+          <div className="hidden sm:flex items-center gap-3 flex-shrink-0">
             <div className="hidden md:flex items-center gap-2">
               <span className="text-sm text-gray-700 truncate max-w-[140px]">
                 {user.name}

@@ -47,7 +47,7 @@ const DEADLINE_DAYS_OPTIONS = [3, 5, 7, 14]
 
 function SectionCard({ children }: { children: React.ReactNode }) {
   return (
-    <div className="bg-white border border-gray-200 rounded-xl p-6">
+    <div className="px-6 py-5">
       {children}
     </div>
   )
@@ -242,7 +242,7 @@ export function NotificationSettingsForm({ initial }: { initial: Settings }) {
 
   return (
     <>
-      <div className="space-y-4">
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm divide-y divide-gray-100">
 
         {/* ── Recordatorios de avance semanal ── */}
         <SectionCard>

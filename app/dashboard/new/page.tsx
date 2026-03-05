@@ -33,10 +33,6 @@ export default async function NewObjectivePage() {
 
   return (
     <AppLayout
-      breadcrumbs={[
-        { label: "Dashboard", href: "/dashboard" },
-        { label: "Nuevo ORC" },
-      ]}
       maxWidth="max-w-3xl"
     >
       <div className="mb-6">

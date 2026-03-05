@@ -14,10 +14,7 @@ export default async function AdminNotificationsPage() {
 
   return (
     <AppLayout
-      breadcrumbs={[
-        { label: "Admin", href: "/admin" },
-        { label: "Notificaciones" },
-      ]}
+      maxWidth="w-[1120px]"
     >
       <AdminNav />
       <div className="mb-6">

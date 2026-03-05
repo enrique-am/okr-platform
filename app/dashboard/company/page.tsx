@@ -87,10 +87,6 @@ export default async function CompanyPage() {
 
   return (
     <AppLayout
-      breadcrumbs={[
-        { label: "Dashboard", href: "/dashboard" },
-        { label: "Empresa" },
-      ]}
     >
       {/* ── Page header ── */}
       <div className="mb-6 flex items-start justify-between gap-4">

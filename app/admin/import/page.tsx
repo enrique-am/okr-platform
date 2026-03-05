@@ -20,17 +20,14 @@ export default async function ImportPage() {
 
   return (
     <AppLayout
-      breadcrumbs={[
-        { label: "Admin", href: "/admin/users" },
-        { label: "Importar CSV" },
-      ]}
+      maxWidth="w-[1120px]"
     >
       <AdminNav />
       <div className="mb-6">
-        <h1 className="text-xl font-semibold text-gray-900">
+        <h1 className="text-lg font-semibold text-gray-900">
           Importar ORCs desde CSV
         </h1>
-        <p className="text-sm text-gray-400 mt-0.5">
+        <p className="text-sm text-gray-500 mt-1">
           Carga objetivos y resultados clave desde un archivo exportado
         </p>
       </div>
