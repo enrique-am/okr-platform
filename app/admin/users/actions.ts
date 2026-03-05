@@ -250,6 +250,22 @@ export async function cancelInvite(userId: string): Promise<Result> {
   }
 }
 
+// ─── Reset onboarding ─────────────────────────────────────────────────────────
+
+export async function resetOnboarding(userId: string): Promise<Result> {
+  try {
+    await assertAdmin()
+    await prisma.user.update({
+      where: { id: userId },
+      data: { hasCompletedOnboarding: false },
+    })
+    revalidatePath("/admin/users")
+    return { success: true }
+  } catch (e) {
+    return { success: false, error: e instanceof Error ? e.message : "Error desconocido" }
+  }
+}
+
 // ─── Delete user ───────────────────────────────────────────────────────────────
 
 export async function deleteUser(userId: string): Promise<Result> {

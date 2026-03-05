@@ -51,6 +51,7 @@ export default async function AdminUsersPage({
       month: "short",
       year: "numeric",
     }),
+    hasCompletedOnboarding: u.hasCompletedOnboarding,
   }))
 
   return (

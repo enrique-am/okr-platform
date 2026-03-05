@@ -15,6 +15,7 @@ declare module "next-auth" {
       image?: string | null
       role: Role
       teamIds: string[]
+      hasCompletedOnboarding: boolean
       impersonatedBy?: { id: string; name: string }
     }
   }
@@ -29,6 +30,7 @@ declare module "next-auth/jwt" {
     id: string
     role: Role
     teamIds: string[]
+    hasCompletedOnboarding: boolean
     impersonatedBy?: { id: string; name: string }
   }
 }

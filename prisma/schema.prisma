@@ -69,7 +69,8 @@ model User {
   role          Role       @default(MEMBER)
   status        UserStatus @default(ACTIVE)
   lastLoginAt   DateTime?
-  inviteToken   String?
+  inviteToken            String?
+  hasCompletedOnboarding Boolean    @default(false)
 
   userTeams UserTeam[]
 

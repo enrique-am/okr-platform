@@ -1,6 +1,7 @@
 "use client"
 
-import { useState, useTransition, useRef } from "react"
+import { useState, useTransition, useRef, useEffect, type ReactNode } from "react"
+import { createPortal } from "react-dom"
 import {
   updateUserRole,
   updateUserTeams,
@@ -10,6 +11,7 @@ import {
   reactivateUser,
   deleteUser,
   cancelInvite,
+  resetOnboarding,
   type BulkInviteRow,
 } from "./actions"
 import { startImpersonation } from "./impersonate-action"
@@ -26,6 +28,7 @@ interface UserRow {
   teams: { id: string; name: string }[]
   lastLoginAt: string | null
   memberSince: string
+  hasCompletedOnboarding: boolean
 }
 
 interface Team {
@@ -84,6 +87,92 @@ function relativeDate(isoString: string | null, status: string): { text: string;
   else color = "text-red-500"
 
   return { text, color }
+}
+
+// ─── Actions Dropdown ─────────────────────────────────────────────────────────
+
+const ITEM_VARIANTS: Record<string, string> = {
+  default: "text-gray-700 hover:bg-gray-50 disabled:text-gray-300",
+  danger:  "text-red-600 hover:bg-red-50 disabled:text-red-300",
+  warning: "text-amber-700 hover:bg-amber-50 disabled:text-amber-300",
+  brand:   "text-brand-700 hover:bg-brand-50 disabled:text-brand-300",
+}
+
+function DropdownItem({
+  onClick,
+  disabled = false,
+  variant = "default",
+  children,
+}: {
+  onClick: () => void
+  disabled?: boolean
+  variant?: "default" | "danger" | "warning" | "brand"
+  children: ReactNode
+}) {
+  return (
+    <button
+      onClick={onClick}
+      disabled={disabled}
+      className={`w-full text-left text-sm px-4 py-2 transition-colors disabled:cursor-not-allowed disabled:opacity-40 ${ITEM_VARIANTS[variant]}`}
+    >
+      {children}
+    </button>
+  )
+}
+
+function ActionsDropdown({ children, disabled }: { children: ReactNode; disabled: boolean }) {
+  const [open, setOpen] = useState(false)
+  const [pos, setPos] = useState({ top: 0, right: 0 })
+  const triggerRef = useRef<HTMLButtonElement>(null)
+  const menuRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    function handleOutside(e: MouseEvent) {
+      if (
+        !triggerRef.current?.contains(e.target as Node) &&
+        !menuRef.current?.contains(e.target as Node)
+      ) {
+        setOpen(false)
+      }
+    }
+    document.addEventListener("mousedown", handleOutside)
+    return () => document.removeEventListener("mousedown", handleOutside)
+  }, [])
+
+  function handleToggle() {
+    if (!open && triggerRef.current) {
+      const r = triggerRef.current.getBoundingClientRect()
+      setPos({ top: r.bottom + 4, right: window.innerWidth - r.right })
+    }
+    setOpen((o) => !o)
+  }
+
+  return (
+    <div className="flex justify-end">
+      <button
+        ref={triggerRef}
+        onClick={handleToggle}
+        disabled={disabled}
+        title="Acciones"
+        className="p-1.5 rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+      >
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
+          <path d="M10 3a1.5 1.5 0 110 3 1.5 1.5 0 010-3zM10 8.5a1.5 1.5 0 110 3 1.5 1.5 0 010-3zM11.5 15.5a1.5 1.5 0 10-3 0 1.5 1.5 0 003 0z" />
+        </svg>
+      </button>
+
+      {open && createPortal(
+        <div
+          ref={menuRef}
+          style={{ position: "fixed", top: pos.top, right: pos.right }}
+          className="w-52 bg-white rounded-xl border border-gray-100 shadow-lg z-[9999] py-1 overflow-hidden"
+        >
+          {children}
+        </div>,
+        document.body
+      )}
+    </div>
+  )
 }
 
 // ─── UserRowComponent ─────────────────────────────────────────────────────────
@@ -254,52 +343,40 @@ function UserRowComponent({
 
       {/* Actions */}
       <td className="px-4 py-3">
-        <div className="flex items-center gap-2 flex-wrap">
+        <ActionsDropdown disabled={isPending}>
           {user.status === "PENDING" ? (
-            <button
-              onClick={() => onCancelInvite(user)}
-              disabled={isPending}
-              className="text-xs font-medium px-3 py-1.5 rounded-lg border border-red-200 text-red-600 hover:bg-red-50 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-            >
+            <DropdownItem onClick={() => onCancelInvite(user)} variant="danger">
               Cancelar invitación
-            </button>
+            </DropdownItem>
           ) : (
             <>
-              <button
-                onClick={handleToggleStatus}
-                disabled={isPending}
-                className={`text-xs font-medium px-3 py-1.5 rounded-lg border transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${
-                  isInactive
-                    ? "border-green-200 text-green-700 hover:bg-green-50"
-                    : "border-gray-200 text-gray-600 hover:bg-gray-50"
-                }`}
-              >
+              <DropdownItem onClick={handleToggleStatus}>
                 {isInactive ? "Reactivar" : "Desactivar"}
-              </button>
-              <button
+              </DropdownItem>
+              <DropdownItem
                 onClick={() => onDelete(user)}
-                disabled={!isInactive || isPending}
-                className="text-xs font-medium px-3 py-1.5 rounded-lg border border-red-200 text-red-600 hover:bg-red-50 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                disabled={!isInactive}
+                variant="danger"
               >
                 Eliminar
-              </button>
+              </DropdownItem>
               {canImpersonate && (
-                <button
-                  onClick={() => {
-                    startTransition(async () => {
-                      await startImpersonation(user.id)
-                    })
-                  }}
-                  disabled={isPending}
-                  title={`Ver la app como ${user.name ?? user.email}`}
-                  className="text-xs font-medium px-3 py-1.5 rounded-lg border border-brand-200 text-brand-700 hover:bg-brand-50 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                <DropdownItem
+                  onClick={() => startTransition(async () => { await startImpersonation(user.id) })}
+                  variant="brand"
                 >
                   Impersonar
-                </button>
+                </DropdownItem>
               )}
+              <DropdownItem
+                onClick={() => startTransition(async () => { await resetOnboarding(user.id) })}
+                variant="warning"
+              >
+                {user.hasCompletedOnboarding ? "Resetear onboarding" : "Onboarding pendiente"}
+              </DropdownItem>
             </>
           )}
-        </div>
+        </ActionsDropdown>
       </td>
     </tr>
   )
@@ -781,10 +858,10 @@ export function UsersTable({
                 <th className="px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wider">
                   Estado
                 </th>
-                <th className="px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wider">
+                <th className="px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wider w-px whitespace-nowrap">
                   Último acceso
                 </th>
-                <th className="px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wider">
+                <th className="px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wider w-px">
                   Acciones
                 </th>
               </tr>

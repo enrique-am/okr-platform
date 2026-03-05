@@ -43,6 +43,12 @@ export async function startImpersonation(targetUserId: string) {
   const originalToken = jar.get(SESSION_COOKIE)?.value
   if (!originalToken) return { success: false, error: "Sesión no encontrada" }
 
+  // Fetch onboarding status for the impersonated user
+  const targetDbUser = await prisma.user.findUnique({
+    where: { id: targetUserId },
+    select: { hasCompletedOnboarding: true },
+  })
+
   // Build a new JWT for the target user, carrying impersonatedBy context
   const newToken = await encode({
     token: {
@@ -51,6 +57,7 @@ export async function startImpersonation(targetUserId: string) {
       email: target.email,
       role: target.role,
       teamIds: userTeams.map((ut) => ut.teamId),
+      hasCompletedOnboarding: targetDbUser?.hasCompletedOnboarding ?? false,
       impersonatedBy: { id: session.user.id, name: session.user.name ?? "Admin" },
     },
     secret,

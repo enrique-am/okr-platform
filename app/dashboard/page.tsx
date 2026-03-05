@@ -9,6 +9,7 @@ import { TeamCard } from "@/components/dashboard/team-card"
 import type { TeamData } from "@/lib/mock-data"
 import { canCreateObjective, canEditObjective, canSubmitCheckin } from "@/lib/permissions"
 import { calcKRProgress, progressToOKRStatus } from "@/lib/progress"
+import { OnboardingOverlay } from "@/components/onboarding/onboarding-overlay"
 
 export const metadata = { title: "Dashboard – OKR Platform" }
 
@@ -17,6 +18,19 @@ export default async function DashboardPage() {
   if (!session) redirect("/login")
 
   const userTeamIds = session.user.teamIds ?? []
+
+  // Fetch first team for the onboarding overlay (only when needed)
+  let onboardingTeamName: string | null = null
+  let onboardingTeamSlug: string | null = null
+  if (!session.user.hasCompletedOnboarding && userTeamIds.length > 0) {
+    const firstTeam = await prisma.team.findFirst({
+      where: { id: { in: userTeamIds } },
+      select: { name: true, slug: true },
+      orderBy: { name: "asc" },
+    })
+    onboardingTeamName = firstTeam?.name ?? null
+    onboardingTeamSlug = firstTeam?.slug ?? null
+  }
   const isLimitedRole =
     session.user.role !== "ADMIN" && session.user.role !== "EXECUTIVE"
 
@@ -158,6 +172,14 @@ export default async function DashboardPage() {
           </div>
         )}
       </div>
+      {!session.user.hasCompletedOnboarding && (
+        <OnboardingOverlay
+          userName={session.user.name ?? null}
+          userRole={session.user.role}
+          teamName={onboardingTeamName}
+          teamSlug={onboardingTeamSlug}
+        />
+      )}
     </AppLayout>
   )
 }

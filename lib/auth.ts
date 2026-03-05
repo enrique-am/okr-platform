@@ -55,12 +55,19 @@ export const authOptions: NextAuthOptions = {
       if (user) {
         token.id = user.id
         token.role = (user as { role: Role }).role
-        // Fetch all team memberships at sign-in and store in token
-        const userTeams = await prisma.userTeam.findMany({
-          where: { userId: user.id },
-          select: { teamId: true },
-        })
+        // Fetch team memberships and onboarding flag at sign-in
+        const [userTeams, dbUser] = await Promise.all([
+          prisma.userTeam.findMany({
+            where: { userId: user.id },
+            select: { teamId: true },
+          }),
+          prisma.user.findUnique({
+            where: { id: user.id },
+            select: { hasCompletedOnboarding: true },
+          }),
+        ])
         token.teamIds = userTeams.map((ut) => ut.teamId)
+        token.hasCompletedOnboarding = dbUser?.hasCompletedOnboarding ?? false
       }
       // `impersonatedBy` is injected directly into the token by the impersonate
       // server action — just preserve it on every subsequent call
@@ -71,6 +78,7 @@ export const authOptions: NextAuthOptions = {
         session.user.id = token.id as string
         session.user.role = token.role as Role
         session.user.teamIds = token.teamIds ?? []
+        session.user.hasCompletedOnboarding = token.hasCompletedOnboarding ?? false
         if (token.impersonatedBy) {
           session.user.impersonatedBy = token.impersonatedBy
         }

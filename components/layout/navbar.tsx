@@ -51,9 +51,9 @@ export async function Navbar() {
           href="/dashboard"
           className="flex items-center gap-2 flex-shrink-0 hover:opacity-80 transition-opacity"
         >
-          <Image src="/logo.png" alt="Grupo AM" width={28} height={28} className="flex-shrink-0" />
+          <Image src="/logo.png" alt="Grupo AM" width={90} height={24} className="flex-shrink-0" />
           <span className="text-sm font-bold text-brand-600 tracking-tight">
-            Grupo AM ORCs
+            ORCs
           </span>
         </Link>
 
