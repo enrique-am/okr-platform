@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { openai } from "@/lib/openai"
+import { captureEvent } from "@/lib/posthog"
+import * as Sentry from "@sentry/nextjs"
 import { checkRateLimit } from "@/lib/rate-limit"
 
 const SYSTEM_PROMPT =
@@ -40,6 +42,11 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "El título es demasiado largo (máx. 500 caracteres)" }, { status: 400 })
   }
 
+  captureEvent(session.user.id, "ai_suggest_used", {
+    type: "suggest_krs",
+    teamName: teamName ?? null,
+  })
+
   const userPrompt = `Sugiere 5 resultados clave para el siguiente objetivo del equipo "${teamName ?? ""}": "${objectiveTitle.trim()}"`
 
   try {
@@ -68,6 +75,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ suggestions })
   } catch (e) {
+    Sentry.captureException(e, { data: { route: "ai/suggest-krs", userId: session.user.id } })
     console.error("OpenAI suggest-krs error:", e)
     return NextResponse.json({ error: "Servicio de IA no disponible" }, { status: 500 })
   }

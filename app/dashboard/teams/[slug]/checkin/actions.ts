@@ -5,6 +5,8 @@ import { revalidatePath } from "next/cache"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { logActivity } from "@/lib/activity-log"
+import { captureEvent } from "@/lib/posthog"
+import * as Sentry from "@sentry/nextjs"
 import { KeyResultType } from "@prisma/client"
 import { canSubmitCheckin } from "@/lib/permissions"
 
@@ -147,6 +149,12 @@ export async function submitCheckIn(input: SubmitCheckInInput): Promise<SubmitCh
         : {}),
     })
 
+    captureEvent(session.user.id, "checkin_submitted", {
+      teamId: teamForPermission?.id,
+      krsUpdated: toProcess.length,
+      userId: session.user.id,
+    })
+
     revalidatePath("/dashboard")
     revalidatePath(`/dashboard/teams/${input.teamSlug}`)
 
@@ -200,6 +208,7 @@ export async function submitCheckIn(input: SubmitCheckInInput): Promise<SubmitCh
 
     return { success: true, milestones }
   } catch (e) {
+    Sentry.captureException(e, { data: { action: "submitCheckIn", userId: session.user.id, teamSlug: input.teamSlug } })
     console.error("submitCheckIn error:", e)
     return { success: false, error: "Error al guardar el avance" }
   }

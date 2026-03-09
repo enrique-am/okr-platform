@@ -6,6 +6,8 @@ import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { ObjectiveStatus, TrackingStatus, KeyResultType } from "@prisma/client"
 import { logActivity } from "@/lib/activity-log"
+import { captureEvent } from "@/lib/posthog"
+import * as Sentry from "@sentry/nextjs"
 import { canCreateObjective } from "@/lib/permissions"
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -144,9 +146,16 @@ export async function createObjective(
         : {}),
     })
 
+    captureEvent(session.user.id, "orc_created", {
+      teamId: input.teamId,
+      level: "TEAM",
+      krsCount: input.keyResults.length,
+    })
+
     revalidatePath("/dashboard")
     return { success: true, objectiveId: objective.id }
   } catch (e) {
+    Sentry.captureException(e, { data: { action: "createObjective", userId: session.user.id, teamId: input.teamId } })
     console.error("createObjective error:", e)
     return { success: false, error: "Error al guardar en la base de datos" }
   }

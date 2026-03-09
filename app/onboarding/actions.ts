@@ -7,6 +7,7 @@ import { encode, decode } from "next-auth/jwt"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { SESSION_COOKIE, SESSION_MAX_AGE } from "@/lib/impersonation"
+import { captureEvent } from "@/lib/posthog"
 
 export async function completeOnboarding(destination: string = "/dashboard") {
   const session = await getServerSession(authOptions)
@@ -15,6 +16,10 @@ export async function completeOnboarding(destination: string = "/dashboard") {
   await prisma.user.update({
     where: { id: session.user.id },
     data: { hasCompletedOnboarding: true },
+  })
+
+  captureEvent(session.user.id, "onboarding_completed", {
+    role: session.user.role,
   })
 
   // Re-encode the JWT with hasCompletedOnboarding: true so middleware

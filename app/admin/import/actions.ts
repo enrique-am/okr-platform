@@ -6,6 +6,8 @@ import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { ObjectiveStatus, TrackingStatus, KeyResultType } from "@prisma/client"
 import { logActivity } from "@/lib/activity-log"
+import { captureEvent } from "@/lib/posthog"
+import * as Sentry from "@sentry/nextjs"
 
 // ─── Quarter → date range ─────────────────────────────────────────────────────
 
@@ -148,11 +150,18 @@ export async function importCSV(
       replaceExisting: input.replaceExisting,
     })
 
+    captureEvent(adminId, "csv_imported", {
+      teamId: input.teamId,
+      orcCount: objectivesCreated,
+      rcCount: krsCreated,
+    })
+
     revalidatePath("/dashboard")
     revalidatePath("/admin/import")
 
     return { success: true, objectivesCreated, krsCreated }
   } catch (e) {
+    Sentry.captureException(e, { data: { action: "importCSV", userId: adminId, teamId: input.teamId } })
     console.error("importCSV error:", e)
     return {
       success: false,

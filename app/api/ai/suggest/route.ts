@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { openai } from "@/lib/openai"
+import { captureEvent } from "@/lib/posthog"
+import * as Sentry from "@sentry/nextjs"
 import { checkRateLimit } from "@/lib/rate-limit"
 
 const SYSTEM_PROMPT =
@@ -44,6 +46,11 @@ export async function POST(req: NextRequest) {
     userPrompt += `\n\nEste resultado clave pertenece al siguiente objetivo: "${parentObjective.trim()}". Asegúrate de que sea específico, medible y alineado con ese objetivo.`
   }
 
+  captureEvent(session.user.id, "ai_suggest_used", {
+    type: type === "objective" ? "improve_objective" : "improve_kr",
+    teamName: teamName ?? null,
+  })
+
   try {
     const completion = await openai.chat.completions.create({
       model: "gpt-4o",
@@ -62,6 +69,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ suggestion })
   } catch (e) {
+    Sentry.captureException(e, { data: { route: "ai/suggest", userId: session.user.id } })
     console.error("OpenAI suggest error:", e)
     return NextResponse.json({ error: "Servicio de IA no disponible" }, { status: 500 })
   }

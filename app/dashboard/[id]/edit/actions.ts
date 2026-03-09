@@ -6,6 +6,8 @@ import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { ObjectiveStatus, TrackingStatus, KeyResultType } from "@prisma/client"
 import { canEditObjective } from "@/lib/permissions"
+import { captureEvent } from "@/lib/posthog"
+import * as Sentry from "@sentry/nextjs"
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -203,9 +205,15 @@ export async function updateObjective(
         }),
     ])
 
+    captureEvent(session.user.id, "orc_edited", {
+      objectiveId: input.objectiveId,
+      teamId: input.teamId,
+    })
+
     revalidatePath("/dashboard")
     return { success: true }
   } catch (e) {
+    Sentry.captureException(e, { data: { action: "updateObjective", userId: session.user.id, objectiveId: input.objectiveId } })
     console.error("updateObjective error:", e)
     return { success: false, error: "Error al guardar en la base de datos" }
   }

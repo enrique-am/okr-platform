@@ -6,6 +6,8 @@ import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { Role, UserStatus } from "@prisma/client"
 import { logActivity } from "@/lib/activity-log"
+import { captureEvent } from "@/lib/posthog"
+import * as Sentry from "@sentry/nextjs"
 import { sendInviteEmail } from "@/lib/email"
 
 type Result = { success: true } | { success: false; error: string }
@@ -114,9 +116,12 @@ export async function inviteUser(
       teamId,
     })
 
+    captureEvent(session.user.id, "user_invited", { role, teamId })
+
     revalidatePath("/admin/users")
     return { success: true }
   } catch (e) {
+    Sentry.captureException(e, { data: { action: "inviteUser" } })
     return { success: false, error: e instanceof Error ? e.message : "Error desconocido" }
   }
 }

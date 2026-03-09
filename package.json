@@ -17,6 +17,7 @@
   "dependencies": {
     "@auth/prisma-adapter": "^2.7.4",
     "@prisma/client": "^6.4.1",
+    "@sentry/nextjs": "^10.42.0",
     "@tailwindcss/typography": "^0.5.19",
     "@tiptap/extension-image": "^3.20.0",
     "@tiptap/extension-link": "^3.20.0",
@@ -32,6 +33,8 @@
     "next-auth": "^4.24.11",
     "nodemailer": "^7.0.13",
     "openai": "^4.104.0",
+    "posthog-js": "^1.360.0",
+    "posthog-node": "^5.28.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "resend": "^6.9.3",

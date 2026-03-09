@@ -3,6 +3,8 @@ import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { sendFeedbackEmail } from "@/lib/email"
+import { captureEvent } from "@/lib/posthog"
+import * as Sentry from "@sentry/nextjs"
 import { FeedbackType, FeedbackPriority, UserStatus, Role } from "@prisma/client"
 
 export async function POST(req: NextRequest) {
@@ -86,8 +88,14 @@ export async function POST(req: NextRequest) {
       )
     )
 
+    captureEvent(session.user.id, "feedback_submitted", {
+      type: type as string,
+      priority: priority ?? null,
+    })
+
     return NextResponse.json({ ok: true, id: report.id })
   } catch (e) {
+    Sentry.captureException(e, { data: { route: "feedback", userId: session.user.id } })
     console.error("feedback POST error:", e)
     return NextResponse.json({ error: "Error al guardar el reporte" }, { status: 500 })
   }
