@@ -99,8 +99,9 @@ model Team {
   leadId String?
   lead   User?   @relation("TeamLead", fields: [leadId], references: [id], onDelete: SetNull)
 
-  userTeams  UserTeam[]
-  objectives Objective[]
+  userTeams          UserTeam[]
+  objectives         Objective[]
+  checkInCompliances CheckInCompliance[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -253,12 +254,36 @@ model NotificationSettings {
 
   welcomeEmailEnabled Boolean @default(true)
 
+  // ── Check-in deadline & compliance ───────────────────────────────────────
+  secondReminderEnabled   Boolean @default(true)
+  secondReminderHour      Int     @default(18) // CST hour for day-of reminder (default 6pm)
+  deadlineDay             Int     @default(2)  // 1=Mon … 5=Fri (default Tuesday)
+  deadlineHour            Int     @default(20) // CST hour for the weekly deadline (default 8pm)
+  complianceReportEnabled Boolean @default(true)
+  complianceReportHour    Int     @default(9)  // CST hour for Wednesday admin report (default 9am)
+
   customReminderMessage String?
   customDigestMessage   String?
 
   updatedAt   DateTime @updatedAt
   updatedById String?
   updatedBy   User?    @relation(fields: [updatedById], references: [id], onDelete: SetNull)
+}
+
+// ─── Check-in Compliance ──────────────────────────────────────────────────────
+
+model CheckInCompliance {
+  id              String    @id @default(cuid())
+  teamId          String
+  team            Team      @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  weekStart       DateTime  // Monday 00:00 in CST-space (used as a grouping key)
+  submittedOnTime Boolean
+  submittedAt     DateTime?
+  createdAt       DateTime  @default(now())
+
+  @@unique([teamId, weekStart])
+  @@index([teamId])
+  @@index([weekStart])
 }
 
 // ─── Help Center ──────────────────────────────────────────────────────────────

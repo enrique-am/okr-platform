@@ -55,6 +55,9 @@ export async function Navbar() {
           <span className="text-sm font-bold text-brand-600 tracking-tight">
             ORCs
           </span>
+          <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full border border-brand-400 text-brand-600 bg-brand-50 leading-none tracking-widest uppercase select-none">
+            BETA
+          </span>
         </Link>
 
         {/* Center: nav links (client component for active state + icons) */}

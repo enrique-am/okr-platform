@@ -57,6 +57,9 @@ export default async function LoginPage({
             Inicia sesión con tu cuenta de Google Workspace para acceder a la plataforma.
           </p>
           <SignInButton />
+          <p className="text-center text-xs text-gray-400 mt-4">
+            versión beta
+          </p>
         </div>
 
         {/* Footer note */}

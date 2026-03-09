@@ -518,6 +518,200 @@ export async function sendWeeklyDigest(
   })
 }
 
+// ─── Urgent Check-in Reminder (day-of deadline) ───────────────────────────────
+
+export async function sendUrgentCheckinReminder(
+  to: string,
+  {
+    name,
+    teamName,
+    teamSlug,
+    deadlineHour,
+    orcs,
+  }: {
+    name?: string | null
+    teamName: string
+    teamSlug: string
+    deadlineHour: number  // CST hour (e.g. 20 = 8pm)
+    orcs: OrcSummary[]
+  }
+) {
+  const firstName = name?.split(" ")[0] ?? null
+  const checkinUrl = `${APP_URL}/dashboard/teams/${teamSlug}/checkin`
+  const hourDisplay = deadlineHour > 12 ? `${deadlineHour - 12}pm` : `${deadlineHour}am`
+
+  const orcRows = orcs
+    .map((orc) => {
+      const pct = Math.min(100, Math.round(orc.progress))
+      const barColor = pct >= 70 ? "#72bf44" : pct >= 60 ? "#f59e0b" : "#ef4444"
+      const textColor = pct >= 70 ? "#15803d" : pct >= 60 ? "#b45309" : "#b91c1c"
+      return `
+        <tr>
+          <td style="padding:10px 0;border-bottom:1px solid #f3f4f6;">
+            <span style="font-size:11px;font-weight:600;color:#9ca3af;text-transform:uppercase;">ORC ${orc.number}</span>
+            <span style="font-size:13px;font-weight:600;color:#111827;margin-left:6px;">${orc.title}</span>
+            <div style="margin-top:6px;display:flex;align-items:center;gap:8px;">
+              <div style="flex:1;background-color:#e5e7eb;border-radius:999px;height:6px;overflow:hidden;">
+                <div style="width:${pct}%;height:6px;background-color:${barColor};border-radius:999px;"></div>
+              </div>
+              <span style="font-size:12px;font-weight:700;color:${textColor};white-space:nowrap;">${pct}%</span>
+            </div>
+          </td>
+        </tr>`
+    })
+    .join("")
+
+  const content = `
+    <div style="text-align:center;margin-bottom:20px;">
+      <span style="display:inline-block;background-color:#fff7ed;color:#c2410c;border:1px solid #fed7aa;border-radius:8px;padding:6px 16px;font-size:13px;font-weight:700;">
+        ⏰ El check-in cierra hoy a las ${hourDisplay}
+      </span>
+    </div>
+
+    <h1 style="margin:0 0 8px;font-size:20px;font-weight:700;color:#111827;">
+      ${firstName ? `¡${firstName}, no olvides tu check-in!` : "¡No olvides tu check-in!"}
+    </h1>
+    <p style="margin:0 0 20px;font-size:14px;color:#6b7280;line-height:1.7;">
+      Tu check-in semanal vence hoy a las <strong>${hourDisplay}</strong>.
+      Regístralo ahora para mantener el seguimiento de los ORCs de <strong>${teamName}</strong>.
+    </p>
+
+    <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:24px;">
+      <tr>
+        <td style="background-color:#f9fafb;border-radius:10px;padding:16px 16px 4px;">
+          <p style="margin:0 0 12px;font-size:11px;font-weight:600;color:#374151;text-transform:uppercase;letter-spacing:0.5px;">
+            ORCs pendientes — ${teamName}
+          </p>
+          <table width="100%" cellpadding="0" cellspacing="0" border="0">
+            ${orcRows}
+          </table>
+        </td>
+      </tr>
+    </table>
+
+    <div style="text-align:center;margin:0 0 12px;">
+      <a href="${checkinUrl}"
+         style="display:inline-block;background-color:#72bf44;color:#ffffff;font-weight:700;font-size:15px;padding:14px 40px;border-radius:10px;text-decoration:none;">
+        Registrar avance ahora →
+      </a>
+    </div>
+    <p style="margin:0;font-size:12px;color:#9ca3af;text-align:center;">
+      Solo toma unos minutos. ¡Tu equipo cuenta contigo!
+    </p>
+  `
+
+  await resend.emails.send({
+    from: FROM,
+    to,
+    subject: `⏰ Tu check-in vence hoy a las ${hourDisplay} — ${teamName}`,
+    html: emailWrapper(content),
+  })
+}
+
+// ─── Compliance Report (Wednesday admin summary) ──────────────────────────────
+
+interface ComplianceTeam {
+  name: string
+  slug: string
+  submittedOnTime: boolean
+  submittedAt: Date | null
+}
+
+export async function sendComplianceReport(
+  to: string,
+  {
+    name,
+    weekLabel,
+    teams,
+    complianceRate,
+  }: {
+    name?: string | null
+    weekLabel: string       // e.g. "3–9 mar 2026"
+    teams: ComplianceTeam[]
+    complianceRate: number  // 0–100
+  }
+) {
+  const firstName = name?.split(" ")[0] ?? null
+  const adminUrl = `${APP_URL}/admin`
+
+  const compliant = teams.filter((t) => t.submittedOnTime)
+  const nonCompliant = teams.filter((t) => !t.submittedOnTime)
+
+  const rateColor = complianceRate >= 80 ? "#15803d" : complianceRate >= 50 ? "#b45309" : "#b91c1c"
+  const rateBg    = complianceRate >= 80 ? "#f0fdf4" : complianceRate >= 50 ? "#fffbeb" : "#fef2f2"
+  const rateBorder = complianceRate >= 80 ? "#bbf7d0" : complianceRate >= 50 ? "#fde68a" : "#fecaca"
+
+  function teamRow(t: ComplianceTeam, ok: boolean) {
+    const ts = t.submittedAt
+      ? new Date(t.submittedAt).toLocaleString("es-MX", {
+          day: "numeric", month: "short", hour: "2-digit", minute: "2-digit",
+        })
+      : null
+    return `
+      <tr>
+        <td style="padding:8px 12px;font-size:13px;color:#111827;font-weight:600;">
+          ${ok ? "✅" : "❌"}&nbsp;&nbsp;${t.name}
+        </td>
+        <td style="padding:8px 12px;font-size:12px;color:${ok ? "#15803d" : "#b91c1c"};text-align:right;white-space:nowrap;">
+          ${ts ? `Enviado ${ts}` : "Sin check-in"}
+        </td>
+      </tr>`
+  }
+
+  const content = `
+    <h1 style="margin:0 0 6px;font-size:20px;font-weight:700;color:#111827;">
+      ${firstName ? `Hola, ${firstName}` : "Hola"} — Reporte de Cumplimiento
+    </h1>
+    <p style="margin:0 0 20px;font-size:14px;color:#6b7280;line-height:1.7;">
+      Resumen de check-ins semanales para la semana del <strong>${weekLabel}</strong>.
+    </p>
+
+    <!-- Compliance rate -->
+    <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:24px;">
+      <tr>
+        <td style="background-color:${rateBg};border:1px solid ${rateBorder};border-radius:12px;padding:20px;text-align:center;">
+          <p style="margin:0 0 4px;font-size:12px;font-weight:600;color:#374151;text-transform:uppercase;letter-spacing:0.5px;">Tasa de cumplimiento</p>
+          <p style="margin:0;font-size:40px;font-weight:800;color:${rateColor};">${complianceRate}%</p>
+          <p style="margin:4px 0 0;font-size:13px;color:${rateColor};">
+            ${compliant.length} de ${teams.length} equipos enviaron a tiempo
+          </p>
+        </td>
+      </tr>
+    </table>
+
+    ${compliant.length > 0 ? `
+    <p style="margin:0 0 8px;font-size:13px;font-weight:700;color:#111827;">✅ Enviaron a tiempo (${compliant.length})</p>
+    <table width="100%" cellpadding="0" cellspacing="0" border="0"
+           style="margin-bottom:20px;border:1px solid #bbf7d0;border-radius:10px;overflow:hidden;background:#f0fdf4;">
+      ${compliant.map((t) => teamRow(t, true)).join("")}
+    </table>` : ""}
+
+    ${nonCompliant.length > 0 ? `
+    <p style="margin:0 0 8px;font-size:13px;font-weight:700;color:#111827;">❌ No enviaron a tiempo (${nonCompliant.length})</p>
+    <table width="100%" cellpadding="0" cellspacing="0" border="0"
+           style="margin-bottom:20px;border:1px solid #fecaca;border-radius:10px;overflow:hidden;background:#fef2f2;">
+      ${nonCompliant.map((t) => teamRow(t, false)).join("")}
+    </table>` : `
+    <p style="margin:0 0 20px;font-size:13px;color:#6b7280;text-align:center;">
+      ✅ ¡Todos los equipos enviaron su check-in a tiempo esta semana!
+    </p>`}
+
+    <div style="text-align:center;margin:24px 0 10px;">
+      <a href="${adminUrl}"
+         style="display:inline-block;background-color:#72bf44;color:#ffffff;font-weight:600;font-size:14px;padding:13px 36px;border-radius:10px;text-decoration:none;">
+        Ver panel de administración
+      </a>
+    </div>
+  `
+
+  await resend.emails.send({
+    from: FROM,
+    to,
+    subject: `Reporte de cumplimiento semanal — ${complianceRate}% de equipos al día`,
+    html: emailWrapper(content),
+  })
+}
+
 // ─── Feedback Report Notification ────────────────────────────────────────────
 
 const PRIORITY_LABELS: Record<string, string> = {

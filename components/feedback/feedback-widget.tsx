@@ -47,6 +47,12 @@ export function FeedbackWidget({ userName, userEmail, userRole, teamName }: Feed
   const [success, setSuccess] = useState(false)
   const pathname = usePathname()
 
+  // Listen for the custom event dispatched by BetaBanner's "Enviar comentario" link
+  useEffect(() => {
+    window.addEventListener("open-feedback", handleOpen)
+    return () => window.removeEventListener("open-feedback", handleOpen)
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
   // Reset to bug tab when modal opens
   function handleOpen() {
     setTab("bug")

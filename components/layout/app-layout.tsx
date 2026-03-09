@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma"
 import { Navbar } from "./navbar"
 import { Breadcrumb, type BreadcrumbItem } from "./breadcrumb"
 import { ImpersonationBanner } from "./impersonation-banner"
+import { BetaBanner } from "./beta-banner"
 import { FeedbackWidget } from "@/components/feedback/feedback-widget"
 import { Footer } from "./footer"
 
@@ -35,6 +36,7 @@ export async function AppLayout({
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
       <ImpersonationBanner />
+      <BetaBanner />
       <Navbar />
       <main className={`${maxWidth} mx-auto px-4 sm:px-6 py-8 flex-1`}>
         {breadcrumbs && breadcrumbs.length > 0 && (
