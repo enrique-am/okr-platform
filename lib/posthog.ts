@@ -25,7 +25,7 @@ export function captureEvent(
   event: string,
   properties?: Record<string, unknown>
 ) {
-  if (!process.env.NEXT_PUBLIC_POSTHOG_KEY) return
+  if (!process.env.NEXT_PUBLIC_POSTHOG_KEY || process.env.NODE_ENV !== "production") return
   try {
     posthog.capture({ distinctId: userId, event, properties })
   } catch {
