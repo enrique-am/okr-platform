@@ -10,6 +10,8 @@ import { canEditObjective, canSubmitCheckin } from "@/lib/permissions"
 import { calcKRProgress, progressToTrafficLight, avgProgress } from "@/lib/progress"
 import { KRChangelogAccordion } from "./kr-changelog-accordion"
 import { DataSourceBadge } from "@/components/kr/data-source-badge"
+import { CheckinDeadlineBadge } from "@/components/dashboard/checkin-deadline-badge"
+import { toCST, getWeekStartUTC, computeDeadlineStatus } from "@/lib/checkin-deadline"
 
 // ─── Metadata ─────────────────────────────────────────────────────────────────
 
@@ -96,31 +98,45 @@ export default async function TeamPage({ params }: { params: { slug: string } })
   const session = await getServerSession(authOptions)
   if (!session) redirect("/login")
 
-  const team = await prisma.team.findUnique({
-    where: { slug: params.slug },
-    include: {
-      lead: { select: { name: true } },
-      objectives: {
-        where: { status: "ACTIVE" },
-        orderBy: { createdAt: "asc" },
-        include: {
-          keyResults: {
-            orderBy: { createdAt: "asc" },
-            include: {
-              checkIns: {
-                orderBy: { createdAt: "desc" },
-                take: 3,
-                include: { author: { select: { name: true } } },
-              },
-              dataSource: {
-                select: { name: true, url: true, instructions: true },
+  const utcNow = new Date()
+  const weekStartUTC = getWeekStartUTC(toCST(utcNow))
+
+  const [team, notificationSettings, latestCheckin] = await Promise.all([
+    prisma.team.findUnique({
+      where: { slug: params.slug },
+      include: {
+        lead: { select: { name: true } },
+        objectives: {
+          where: { status: "ACTIVE" },
+          orderBy: { createdAt: "asc" },
+          include: {
+            keyResults: {
+              orderBy: { createdAt: "asc" },
+              include: {
+                checkIns: {
+                  orderBy: { createdAt: "desc" },
+                  take: 3,
+                  include: { author: { select: { name: true } } },
+                },
+                dataSource: {
+                  select: { name: true, url: true, instructions: true },
+                },
               },
             },
           },
         },
       },
-    },
-  })
+    }),
+    prisma.notificationSettings.findUnique({ where: { id: 1 } }),
+    prisma.checkIn.findFirst({
+      where: {
+        createdAt: { gte: weekStartUTC },
+        keyResult: { objective: { team: { slug: params.slug } } },
+      },
+      orderBy: { createdAt: "desc" },
+      select: { createdAt: true },
+    }),
+  ])
 
   if (!team) notFound()
 
@@ -145,6 +161,17 @@ export default async function TeamPage({ params }: { params: { slug: string } })
   const teamTrafficLight = progressToTrafficLight(teamProgress)
   const teamCfg = TRACKING_CONFIG[teamTrafficLight]
 
+  const deadlineSettings = {
+    deadlineDay: notificationSettings?.deadlineDay ?? 2,
+    deadlineHour: notificationSettings?.deadlineHour ?? 20,
+    secondReminderHour: notificationSettings?.secondReminderHour ?? 18,
+  }
+  const deadlineStatus = computeDeadlineStatus(
+    utcNow,
+    latestCheckin?.createdAt ?? null,
+    deadlineSettings
+  )
+
   return (
     <AppLayout
       maxWidth="max-w-4xl"
@@ -157,7 +184,7 @@ export default async function TeamPage({ params }: { params: { slug: string } })
             <h1 className="text-2xl font-bold text-gray-900">{team.name}</h1>
             <p className="text-sm text-gray-400 mt-1">{lead}</p>
             {team.objectives.length > 0 && (
-              <div className="mt-3 flex items-center gap-3">
+              <div className="mt-3 flex flex-wrap items-center gap-3">
                 <div className="w-40 h-2 bg-gray-100 rounded-full overflow-hidden flex-shrink-0">
                   <div
                     className="h-full rounded-full transition-all duration-500"
@@ -169,6 +196,11 @@ export default async function TeamPage({ params }: { params: { slug: string } })
                   <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${teamCfg.dot}`} />
                   {teamCfg.label}
                 </span>
+                <CheckinDeadlineBadge
+                  status={deadlineStatus}
+                  deadlineDay={deadlineSettings.deadlineDay}
+                  deadlineHour={deadlineSettings.deadlineHour}
+                />
               </div>
             )}
           </div>

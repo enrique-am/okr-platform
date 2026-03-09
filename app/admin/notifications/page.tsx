@@ -34,6 +34,12 @@ export default async function AdminNotificationsPage() {
           weeklyDigestDay: settings.weeklyDigestDay,
           weeklyDigestHour: settings.weeklyDigestHour,
           welcomeEmailEnabled: settings.welcomeEmailEnabled,
+          secondReminderEnabled: settings.secondReminderEnabled,
+          secondReminderHour: settings.secondReminderHour,
+          deadlineDay: settings.deadlineDay,
+          deadlineHour: settings.deadlineHour,
+          complianceReportEnabled: settings.complianceReportEnabled,
+          complianceReportHour: settings.complianceReportHour,
           customReminderMessage: settings.customReminderMessage,
           customDigestMessage: settings.customDigestMessage,
         }}

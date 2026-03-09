@@ -25,6 +25,12 @@ const DEFAULT_SETTINGS = {
   weeklyDigestDay: 1,
   weeklyDigestHour: 7,
   welcomeEmailEnabled: true,
+  secondReminderEnabled: true,
+  secondReminderHour: 18,
+  deadlineDay: 2,
+  deadlineHour: 20,
+  complianceReportEnabled: true,
+  complianceReportHour: 9,
   customReminderMessage: null as string | null,
   customDigestMessage: null as string | null,
 }
@@ -93,6 +99,24 @@ export async function triggerDeadlineReminders(): Promise<{ success: true; data:
 export async function triggerWeeklyDigest(): Promise<{ success: true; data: unknown } | { success: false; error: string }> {
   try {
     const data = await callCronEndpoint("/api/cron/weekly-digest")
+    return { success: true, data }
+  } catch (err) {
+    return { success: false, error: err instanceof Error ? err.message : "Error al enviar" }
+  }
+}
+
+export async function triggerSecondReminder(): Promise<{ success: true; data: unknown } | { success: false; error: string }> {
+  try {
+    const data = await callCronEndpoint("/api/cron/deadline-checkin-reminder")
+    return { success: true, data }
+  } catch (err) {
+    return { success: false, error: err instanceof Error ? err.message : "Error al enviar" }
+  }
+}
+
+export async function triggerComplianceReport(): Promise<{ success: true; data: unknown } | { success: false; error: string }> {
+  try {
+    const data = await callCronEndpoint("/api/cron/compliance-report")
     return { success: true, data }
   } catch (err) {
     return { success: false, error: err instanceof Error ? err.message : "Error al enviar" }

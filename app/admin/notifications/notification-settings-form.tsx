@@ -5,6 +5,8 @@ import {
   updateNotificationSettings,
   triggerWeeklyReminders,
   triggerWeeklyDigest,
+  triggerSecondReminder,
+  triggerComplianceReport,
 } from "./actions"
 import { ToastList, ToastItem } from "@/components/ui/toast"
 
@@ -20,6 +22,12 @@ interface Settings {
   weeklyDigestDay: number
   weeklyDigestHour: number
   welcomeEmailEnabled: boolean
+  secondReminderEnabled: boolean
+  secondReminderHour: number
+  deadlineDay: number
+  deadlineHour: number
+  complianceReportEnabled: boolean
+  complianceReportHour: number
   customReminderMessage: string | null
   customDigestMessage: string | null
 }
@@ -177,6 +185,8 @@ export function NotificationSettingsForm({ initial }: { initial: Settings }) {
   const [savedKeys, setSavedKeys] = useState<Record<string, boolean>>({})
   const [sendingReminders, setSendingReminders] = useState(false)
   const [sendingDigest, setSendingDigest] = useState(false)
+  const [sendingSecondReminder, setSendingSecondReminder] = useState(false)
+  const [sendingComplianceReport, setSendingComplianceReport] = useState(false)
   const [toasts, setToasts] = useState<ToastItem[]>([])
   const [, startTransition] = useTransition()
 
@@ -237,6 +247,44 @@ export function NotificationSettingsForm({ initial }: { initial: Settings }) {
       }
     } finally {
       setSendingDigest(false)
+    }
+  }
+
+  async function handleSendSecondReminder() {
+    setSendingSecondReminder(true)
+    try {
+      const result = await triggerSecondReminder()
+      if (result.success) {
+        const d = result.data as { sent?: number; skipped?: boolean }
+        if (d.skipped) {
+          addToast("⚠️ El recordatorio urgente está desactivado en la configuración.")
+        } else {
+          addToast(`✅ Recordatorio urgente enviado (${d.sent ?? 0} destinatarios).`, true)
+        }
+      } else {
+        addToast(`❌ Error: ${result.error}`)
+      }
+    } finally {
+      setSendingSecondReminder(false)
+    }
+  }
+
+  async function handleSendComplianceReport() {
+    setSendingComplianceReport(true)
+    try {
+      const result = await triggerComplianceReport()
+      if (result.success) {
+        const d = result.data as { sent?: number; skipped?: boolean; complianceRate?: number }
+        if (d.skipped) {
+          addToast("⚠️ El reporte de cumplimiento está desactivado en la configuración.")
+        } else {
+          addToast(`✅ Reporte de cumplimiento enviado (${d.sent ?? 0} admins, ${d.complianceRate ?? 0}% cumplimiento).`, true)
+        }
+      } else {
+        addToast(`❌ Error: ${result.error}`)
+      }
+    } finally {
+      setSendingComplianceReport(false)
     }
   }
 
@@ -397,6 +445,71 @@ export function NotificationSettingsForm({ initial }: { initial: Settings }) {
           </div>
 
           <SendNowButton onClick={handleSendDigest} loading={sendingDigest} />
+        </SectionCard>
+
+        {/* ── Deadline de check-in semanal ── */}
+        <SectionCard>
+          <div className="flex items-center justify-between mb-1">
+            <SectionTitle>Deadline de check-in semanal</SectionTitle>
+            <SavedIndicator show={!!savedKeys["checkin-deadline"]} />
+          </div>
+          <p className="text-sm text-gray-500 mb-4">
+            Define el día y hora límite para registrar avances cada semana, el recordatorio urgente del día del deadline, y el reporte de cumplimiento para administradores.
+          </p>
+
+          <div className="mb-5">
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Deadline semanal</p>
+            <FieldRow label="Día límite">
+              <SelectField
+                value={settings.deadlineDay}
+                onChange={(v) => save({ deadlineDay: v }, "checkin-deadline")}
+                options={DAYS}
+              />
+            </FieldRow>
+            <FieldRow label="Hora límite">
+              <SelectField
+                value={settings.deadlineHour}
+                onChange={(v) => save({ deadlineHour: v }, "checkin-deadline")}
+                options={HOURS}
+              />
+            </FieldRow>
+          </div>
+
+          <div className="mb-5">
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Recordatorio urgente (día del deadline)</p>
+            <ToggleRow
+              label="Activado"
+              enabled={settings.secondReminderEnabled}
+              onChange={(v) => save({ secondReminderEnabled: v }, "checkin-deadline")}
+            />
+            <FieldRow label="Hora de envío">
+              <SelectField
+                value={settings.secondReminderHour}
+                onChange={(v) => save({ secondReminderHour: v }, "checkin-deadline")}
+                options={HOURS}
+                disabled={!settings.secondReminderEnabled}
+              />
+            </FieldRow>
+            <SendNowButton onClick={handleSendSecondReminder} loading={sendingSecondReminder} />
+          </div>
+
+          <div>
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Reporte de cumplimiento (miércoles para admins)</p>
+            <ToggleRow
+              label="Activado"
+              enabled={settings.complianceReportEnabled}
+              onChange={(v) => save({ complianceReportEnabled: v }, "checkin-deadline")}
+            />
+            <FieldRow label="Hora de envío">
+              <SelectField
+                value={settings.complianceReportHour}
+                onChange={(v) => save({ complianceReportHour: v }, "checkin-deadline")}
+                options={HOURS}
+                disabled={!settings.complianceReportEnabled}
+              />
+            </FieldRow>
+            <SendNowButton onClick={handleSendComplianceReport} loading={sendingComplianceReport} />
+          </div>
         </SectionCard>
 
         {/* ── Emails de bienvenida ── */}

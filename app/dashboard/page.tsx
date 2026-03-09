@@ -10,6 +10,8 @@ import type { TeamData } from "@/lib/mock-data"
 import { canCreateObjective, canEditObjective, canSubmitCheckin } from "@/lib/permissions"
 import { calcKRProgress, progressToOKRStatus } from "@/lib/progress"
 import { OnboardingOverlay } from "@/components/onboarding/onboarding-overlay"
+import { CheckinDeadlineBadge } from "@/components/dashboard/checkin-deadline-badge"
+import { toCST, getWeekStartCST, getWeekStartUTC, computeDeadlineStatus } from "@/lib/checkin-deadline"
 
 export const metadata = { title: "Dashboard – OKR Platform" }
 
@@ -34,35 +36,54 @@ export default async function DashboardPage() {
   const isLimitedRole =
     session.user.role !== "ADMIN" && session.user.role !== "EXECUTIVE"
 
-  const rawTeams = await prisma.team.findMany({
-    where: isLimitedRole && userTeamIds.length > 0
-      ? { id: { in: userTeamIds } }
-      : undefined,
-    include: {
-      lead: { select: { name: true } },
-      objectives: {
-        where: { status: "ACTIVE", level: "TEAM" },
-        orderBy: { createdAt: "asc" },
-        include: {
-          keyResults: {
-            orderBy: { createdAt: "asc" },
-            select: {
-              id: true,
-              title: true,
-              type: true,
-              currentValue: true,
-              targetValue: true,
-              startValue: true,
-              unit: true,
-              trackingStatus: true,
-              description: true,
+  // Deadline settings + week boundaries for compliance badges
+  const utcNow = new Date()
+  const weekStartUTC = getWeekStartUTC(toCST(utcNow))
+
+  const [rawTeams, notificationSettings, recentCheckIns] = await Promise.all([
+    prisma.team.findMany({
+      where: isLimitedRole && userTeamIds.length > 0
+        ? { id: { in: userTeamIds } }
+        : undefined,
+      include: {
+        lead: { select: { name: true } },
+        objectives: {
+          where: { status: "ACTIVE", level: "TEAM" },
+          orderBy: { createdAt: "asc" },
+          include: {
+            keyResults: {
+              orderBy: { createdAt: "asc" },
+              select: {
+                id: true,
+                title: true,
+                type: true,
+                currentValue: true,
+                targetValue: true,
+                startValue: true,
+                unit: true,
+                trackingStatus: true,
+                description: true,
+              },
             },
           },
         },
       },
-    },
-    orderBy: { name: "asc" },
-  })
+      orderBy: { name: "asc" },
+    }),
+    prisma.notificationSettings.findUnique({ where: { id: 1 } }),
+    prisma.checkIn.findMany({
+      where: { createdAt: { gte: weekStartUTC } },
+      select: {
+        keyResult: {
+          select: {
+            objective: { select: { teamId: true } },
+          },
+        },
+        createdAt: true,
+      },
+      orderBy: { createdAt: "desc" },
+    }),
+  ])
 
   const teams: TeamData[] = rawTeams
     .filter((t) => t.objectives.length > 0)
@@ -102,6 +123,22 @@ export default async function DashboardPage() {
         }
       }),
     }))
+
+  // Build last-check-in map: teamId → most recent check-in date this week
+  const lastCheckinByTeamId = new Map<string, Date>()
+  for (const ci of recentCheckIns) {
+    const teamId = ci.keyResult.objective.teamId
+    if (!teamId) continue
+    if (!lastCheckinByTeamId.has(teamId)) {
+      lastCheckinByTeamId.set(teamId, ci.createdAt)
+    }
+  }
+
+  const deadlineSettings = {
+    deadlineDay: notificationSettings?.deadlineDay ?? 2,
+    deadlineHour: notificationSettings?.deadlineHour ?? 20,
+    secondReminderHour: notificationSettings?.secondReminderHour ?? 18,
+  }
 
   const userCtx = {
     id: session.user.id,
@@ -161,14 +198,27 @@ export default async function DashboardPage() {
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-            {teams.map((team) => (
-              <TeamCard
-                key={team.id}
-                team={team}
-                canEdit={canEditObjective(userCtx, team.id)}
-                canCheckin={canSubmitCheckin(userCtx, team.id)}
-              />
-            ))}
+            {teams.map((team) => {
+              const deadlineStatus = computeDeadlineStatus(
+                utcNow,
+                lastCheckinByTeamId.get(team.id) ?? null,
+                deadlineSettings
+              )
+              return (
+                <div key={team.id} className="flex flex-col gap-2">
+                  <TeamCard
+                    team={team}
+                    canEdit={canEditObjective(userCtx, team.id)}
+                    canCheckin={canSubmitCheckin(userCtx, team.id)}
+                  />
+                  <CheckinDeadlineBadge
+                    status={deadlineStatus}
+                    deadlineDay={deadlineSettings.deadlineDay}
+                    deadlineHour={deadlineSettings.deadlineHour}
+                  />
+                </div>
+              )
+            })}
           </div>
         )}
       </div>

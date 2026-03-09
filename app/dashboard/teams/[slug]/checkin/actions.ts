@@ -9,6 +9,7 @@ import { captureEvent } from "@/lib/posthog"
 import * as Sentry from "@sentry/nextjs"
 import { KeyResultType } from "@prisma/client"
 import { canSubmitCheckin } from "@/lib/permissions"
+import { toCST, getWeekStartCST } from "@/lib/checkin-deadline"
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -154,6 +155,41 @@ export async function submitCheckIn(input: SubmitCheckInInput): Promise<SubmitCh
       krsUpdated: toProcess.length,
       userId: session.user.id,
     })
+
+    // ── Compliance tracking ───────────────────────────────────────────────────
+    if (teamForPermission?.id) {
+      try {
+        const settings = await prisma.notificationSettings.findUnique({ where: { id: 1 } })
+        const utcNow = new Date()
+        const cstNow = toCST(utcNow)
+        const weekStartCST = getWeekStartCST(cstNow)
+        // weekStart stored in CST-space as per model convention
+        const weekStart = weekStartCST
+
+        // Deadline: deadlineDay days after Monday at deadlineHour (CST-space)
+        const deadlineCST = new Date(weekStartCST)
+        const deadlineDay = settings?.deadlineDay ?? 2
+        const deadlineHour = settings?.deadlineHour ?? 20
+        deadlineCST.setUTCDate(weekStartCST.getUTCDate() + deadlineDay - 1)
+        deadlineCST.setUTCHours(deadlineHour, 0, 0, 0)
+
+        const submittedOnTime = cstNow <= deadlineCST
+
+        await prisma.checkInCompliance.upsert({
+          where: { teamId_weekStart: { teamId: teamForPermission.id, weekStart } },
+          update: { submittedAt: utcNow, submittedOnTime },
+          create: {
+            teamId: teamForPermission.id,
+            weekStart,
+            submittedAt: utcNow,
+            submittedOnTime,
+          },
+        })
+      } catch (complianceErr) {
+        // Non-fatal — log but don't fail the check-in
+        console.error("compliance upsert error:", complianceErr)
+      }
+    }
 
     revalidatePath("/dashboard")
     revalidatePath(`/dashboard/teams/${input.teamSlug}`)
