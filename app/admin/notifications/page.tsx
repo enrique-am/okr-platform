@@ -29,22 +29,17 @@ export default async function AdminNotificationsPage() {
       </div>
       <div className="space-y-8">
         <NotificationSettingsForm
+          initialTemplates={templates}
           initial={{
             weeklyReminderEnabled: settings.weeklyReminderEnabled,
-            weeklyReminderDay: settings.weeklyReminderDay,
-            weeklyReminderHour: settings.weeklyReminderHour,
             deadlineReminderEnabled: settings.deadlineReminderEnabled,
             deadlineReminderDays: settings.deadlineReminderDays,
             weeklyDigestEnabled: settings.weeklyDigestEnabled,
-            weeklyDigestDay: settings.weeklyDigestDay,
-            weeklyDigestHour: settings.weeklyDigestHour,
             welcomeEmailEnabled: settings.welcomeEmailEnabled,
             secondReminderEnabled: settings.secondReminderEnabled,
-            secondReminderHour: settings.secondReminderHour,
             deadlineDay: settings.deadlineDay,
             deadlineHour: settings.deadlineHour,
             complianceReportEnabled: settings.complianceReportEnabled,
-            complianceReportHour: settings.complianceReportHour,
             customReminderMessage: settings.customReminderMessage,
             customDigestMessage: settings.customDigestMessage,
           }}

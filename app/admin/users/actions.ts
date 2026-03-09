@@ -100,10 +100,13 @@ export async function inviteUser(
     })
 
     try {
-      await sendInviteEmail(normalizedEmail, {
-        roleName: ROLE_LABELS[role] || role,
-        teamName: team.name,
-      })
+      const notifSettings = await prisma.notificationSettings.findUnique({ where: { id: 1 } })
+      if (notifSettings?.welcomeEmailEnabled !== false) {
+        await sendInviteEmail(normalizedEmail, {
+          roleName: ROLE_LABELS[role] || role,
+          teamName: team.name,
+        })
+      }
     } catch {
       // Email send failure is non-fatal — user is still created
       console.error("Failed to send invite email to", normalizedEmail)
@@ -154,6 +157,8 @@ export async function bulkInviteUsers(
       select: { email: true },
     })
     const existingEmailSet = new Set(existingUsers.map((u) => u.email))
+    const notifSettings = await prisma.notificationSettings.findUnique({ where: { id: 1 } })
+    const welcomeEnabled = notifSettings?.welcomeEmailEnabled !== false
 
     for (const row of normalizedRows) {
       try {
@@ -173,13 +178,15 @@ export async function bulkInviteUsers(
           },
         })
 
-        try {
-          await sendInviteEmail(row.normalizedEmail, {
-            roleName: ROLE_LABELS[row.role] || row.role,
-            teamName: row.teamName,
-          })
-        } catch {
-          console.error("Failed to send invite email to", row.normalizedEmail)
+        if (welcomeEnabled) {
+          try {
+            await sendInviteEmail(row.normalizedEmail, {
+              roleName: ROLE_LABELS[row.role] || row.role,
+              teamName: row.teamName,
+            })
+          } catch {
+            console.error("Failed to send invite email to", row.normalizedEmail)
+          }
         }
 
         created++

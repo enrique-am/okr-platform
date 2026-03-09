@@ -101,8 +101,9 @@ interface EditorModalProps {
   onSaved: (updated: Pick<EmailTemplateData, "type" | "subject" | "bodyHtml" | "isCustom">) => void
 }
 
-function EditorModal({ template, onClose, onSaved }: EditorModalProps) {
-  const [tab, setTab] = useState<"editor" | "preview">("editor")
+export function EditorModal({ template, onClose, onSaved }: EditorModalProps) {
+  const [tab, setTab] = useState<"editor" | "preview" | "html">("editor")
+  const [editorKey, setEditorKey] = useState(0)
   const [subject, setSubject] = useState(template.subject)
   const [bodyHtml, setBodyHtml] = useState(template.bodyHtml)
   const [saving, setSaving] = useState(false)
@@ -223,18 +224,21 @@ function EditorModal({ template, onClose, onSaved }: EditorModalProps) {
 
       {/* Tabs */}
       <div className="flex border-b border-gray-100 px-6 flex-shrink-0 bg-white">
-        {(["editor", "preview"] as const).map((t) => (
+        {(["editor", "preview", "html"] as const).map((t) => (
           <button
             key={t}
             type="button"
-            onClick={() => setTab(t)}
+            onClick={() => {
+              if (tab === "html" && t === "editor") setEditorKey((k) => k + 1)
+              setTab(t)
+            }}
             className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
               tab === t
                 ? "border-brand-500 text-brand-600"
                 : "border-transparent text-gray-500 hover:text-gray-700"
             }`}
           >
-            {t === "editor" ? "Editor visual" : "Vista previa"}
+            {t === "editor" ? "Editor visual" : t === "preview" ? "Vista previa" : <span className="font-mono">HTML</span>}
           </button>
         ))}
         {tab === "preview" && (
@@ -248,14 +252,21 @@ function EditorModal({ template, onClose, onSaved }: EditorModalProps) {
       <div className="flex-1 overflow-hidden">
         {tab === "editor" ? (
           <div className="h-full p-4">
-            <EmailBodyEditor value={bodyHtml} onChange={setBodyHtml} />
+            <EmailBodyEditor key={editorKey} value={bodyHtml} onChange={setBodyHtml} />
           </div>
-        ) : (
+        ) : tab === "preview" ? (
           <iframe
             srcDoc={buildEmailPreview(bodyHtml)}
             title="Vista previa del email"
             className="w-full h-full border-0"
             sandbox="allow-same-origin"
+          />
+        ) : (
+          <textarea
+            value={bodyHtml}
+            onChange={(e) => setBodyHtml(e.target.value)}
+            className="w-full h-full px-6 py-5 font-mono text-xs text-gray-700 bg-gray-50 outline-none resize-none"
+            spellCheck={false}
           />
         )}
       </div>

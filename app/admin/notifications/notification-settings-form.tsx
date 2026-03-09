@@ -9,25 +9,20 @@ import {
   triggerComplianceReport,
 } from "./actions"
 import { ToastList, ToastItem } from "@/components/ui/toast"
+import { EditorModal, EmailTemplateData } from "./email-templates-section"
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 interface Settings {
   weeklyReminderEnabled: boolean
-  weeklyReminderDay: number
-  weeklyReminderHour: number
   deadlineReminderEnabled: boolean
   deadlineReminderDays: number
   weeklyDigestEnabled: boolean
-  weeklyDigestDay: number
-  weeklyDigestHour: number
   welcomeEmailEnabled: boolean
   secondReminderEnabled: boolean
-  secondReminderHour: number
   deadlineDay: number
   deadlineHour: number
   complianceReportEnabled: boolean
-  complianceReportHour: number
   customReminderMessage: string | null
   customDigestMessage: string | null
 }
@@ -149,6 +144,14 @@ function SavedIndicator({ show }: { show: boolean }) {
   )
 }
 
+function FixedScheduleNote({ label }: { label: string }) {
+  return (
+    <p className="text-sm text-gray-400 mb-4">
+      Envío fijo: <span className="font-medium">{label}</span>
+    </p>
+  )
+}
+
 function SendNowButton({
   onClick,
   loading,
@@ -180,9 +183,17 @@ function SendNowButton({
 
 // ─── Main form ────────────────────────────────────────────────────────────────
 
-export function NotificationSettingsForm({ initial }: { initial: Settings }) {
+export function NotificationSettingsForm({
+  initial,
+  initialTemplates,
+}: {
+  initial: Settings
+  initialTemplates: EmailTemplateData[]
+}) {
   const [settings, setSettings] = useState<Settings>(initial)
   const [savedKeys, setSavedKeys] = useState<Record<string, boolean>>({})
+  const [templates, setTemplates] = useState<EmailTemplateData[]>(initialTemplates)
+  const [editingType, setEditingType] = useState<string | null>(null)
   const [sendingReminders, setSendingReminders] = useState(false)
   const [sendingDigest, setSendingDigest] = useState(false)
   const [sendingSecondReminder, setSendingSecondReminder] = useState(false)
@@ -288,6 +299,33 @@ export function NotificationSettingsForm({ initial }: { initial: Settings }) {
     }
   }
 
+  function templateFor(type: string): EmailTemplateData {
+    return templates.find((t) => t.type === type) ?? { id: type, type, subject: "", bodyHtml: "", isCustom: false }
+  }
+
+  function handleTemplateSaved(updated: Pick<EmailTemplateData, "type" | "subject" | "bodyHtml" | "isCustom">) {
+    setTemplates((prev) =>
+      prev.some((t) => t.type === updated.type)
+        ? prev.map((t) => t.type === updated.type ? { ...t, ...updated } : t)
+        : [...prev, { id: updated.type, ...updated }]
+    )
+  }
+
+  function EditBtn({ type }: { type: string }) {
+    return (
+      <button
+        type="button"
+        onClick={() => setEditingType(type)}
+        className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg border border-gray-300 text-gray-600 bg-white hover:bg-gray-50 hover:border-brand-400 hover:text-brand-700 transition-colors flex-shrink-0"
+      >
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-3.5 h-3.5">
+          <path d="M13.488 2.513a1.75 1.75 0 00-2.475 0L6.75 6.774a2.75 2.75 0 00-.596.892l-.83 2.322a.75.75 0 00.95.95l2.322-.83a2.75 2.75 0 00.892-.596l4.26-4.263a1.75 1.75 0 000-2.476zM4.75 8.75A.75.75 0 004 9.5v1a.75.75 0 00.75.75h1a.75.75 0 000-1.5H5v-.25a.75.75 0 00-.75-.75z" />
+        </svg>
+        Editar plantilla
+      </button>
+    )
+  }
+
   return (
     <>
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm divide-y divide-gray-100">
@@ -296,7 +334,10 @@ export function NotificationSettingsForm({ initial }: { initial: Settings }) {
         <SectionCard>
           <div className="flex items-center justify-between mb-1">
             <SectionTitle>Recordatorios de avance semanal</SectionTitle>
-            <SavedIndicator show={!!savedKeys["weekly"]} />
+            <div className="flex items-center gap-3">
+              <SavedIndicator show={!!savedKeys["weekly"]} />
+              <EditBtn type="WEEKLY_REMINDER" />
+            </div>
           </div>
           <p className="text-sm text-gray-500 mb-4">
             Envía un recordatorio a los miembros de equipo que no han registrado avance en 7 días.
@@ -308,23 +349,7 @@ export function NotificationSettingsForm({ initial }: { initial: Settings }) {
             onChange={(v) => save({ weeklyReminderEnabled: v }, "weekly")}
           />
 
-          <FieldRow label="Día de envío">
-            <SelectField
-              value={settings.weeklyReminderDay}
-              onChange={(v) => save({ weeklyReminderDay: v }, "weekly")}
-              options={DAYS}
-              disabled={!settings.weeklyReminderEnabled}
-            />
-          </FieldRow>
-
-          <FieldRow label="Hora de envío">
-            <SelectField
-              value={settings.weeklyReminderHour}
-              onChange={(v) => save({ weeklyReminderHour: v }, "weekly")}
-              options={HOURS}
-              disabled={!settings.weeklyReminderEnabled}
-            />
-          </FieldRow>
+          <FixedScheduleNote label="lunes 8:00 am (hora Ciudad de México)" />
 
           <div className="mb-3">
             <label className="block text-sm text-gray-600 mb-1.5">
@@ -355,7 +380,10 @@ export function NotificationSettingsForm({ initial }: { initial: Settings }) {
         <SectionCard>
           <div className="flex items-center justify-between mb-1">
             <SectionTitle>Alertas de vencimiento de ORCs</SectionTitle>
-            <SavedIndicator show={!!savedKeys["deadline"]} />
+            <div className="flex items-center gap-3">
+              <SavedIndicator show={!!savedKeys["deadline"]} />
+              <EditBtn type="DEADLINE_REMINDER" />
+            </div>
           </div>
           <p className="text-sm text-gray-500 mb-4">
             Notifica al equipo cuando un ORC está próximo a su fecha límite.
@@ -392,7 +420,10 @@ export function NotificationSettingsForm({ initial }: { initial: Settings }) {
         <SectionCard>
           <div className="flex items-center justify-between mb-1">
             <SectionTitle>Digest ejecutivo semanal</SectionTitle>
-            <SavedIndicator show={!!savedKeys["digest"]} />
+            <div className="flex items-center gap-3">
+              <SavedIndicator show={!!savedKeys["digest"]} />
+              <EditBtn type="WEEKLY_DIGEST" />
+            </div>
           </div>
           <p className="text-sm text-gray-500 mb-4">
             Resume el progreso de todos los equipos y lo envía a ejecutivos y administradores.
@@ -404,23 +435,7 @@ export function NotificationSettingsForm({ initial }: { initial: Settings }) {
             onChange={(v) => save({ weeklyDigestEnabled: v }, "digest")}
           />
 
-          <FieldRow label="Día de envío">
-            <SelectField
-              value={settings.weeklyDigestDay}
-              onChange={(v) => save({ weeklyDigestDay: v }, "digest")}
-              options={DAYS}
-              disabled={!settings.weeklyDigestEnabled}
-            />
-          </FieldRow>
-
-          <FieldRow label="Hora de envío">
-            <SelectField
-              value={settings.weeklyDigestHour}
-              onChange={(v) => save({ weeklyDigestHour: v }, "digest")}
-              options={HOURS}
-              disabled={!settings.weeklyDigestEnabled}
-            />
-          </FieldRow>
+          <FixedScheduleNote label="lunes 7:00 am (hora Ciudad de México)" />
 
           <div className="mb-3">
             <label className="block text-sm text-gray-600 mb-1.5">
@@ -454,11 +469,11 @@ export function NotificationSettingsForm({ initial }: { initial: Settings }) {
             <SavedIndicator show={!!savedKeys["checkin-deadline"]} />
           </div>
           <p className="text-sm text-gray-500 mb-4">
-            Define el día y hora límite para registrar avances cada semana, el recordatorio urgente del día del deadline, y el reporte de cumplimiento para administradores.
+            Define la hora límite semanal que se muestra en los emails de recordatorio urgente, activa o desactiva cada tipo de notificación, y envía el reporte de cumplimiento a los administradores.
           </p>
 
           <div className="mb-5">
-            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Deadline semanal</p>
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Hora límite semanal</p>
             <FieldRow label="Día límite">
               <SelectField
                 value={settings.deadlineDay}
@@ -466,48 +481,46 @@ export function NotificationSettingsForm({ initial }: { initial: Settings }) {
                 options={DAYS}
               />
             </FieldRow>
-            <FieldRow label="Hora límite">
-              <SelectField
-                value={settings.deadlineHour}
-                onChange={(v) => save({ deadlineHour: v }, "checkin-deadline")}
-                options={HOURS}
-              />
-            </FieldRow>
+            <div className="mb-3">
+              <div className="flex items-center gap-3">
+                <span className="text-sm text-gray-600 w-32 flex-shrink-0">Hora límite</span>
+                <SelectField
+                  value={settings.deadlineHour}
+                  onChange={(v) => save({ deadlineHour: v }, "checkin-deadline")}
+                  options={HOURS}
+                />
+              </div>
+              <p className="text-xs text-gray-400 mt-1.5 ml-[8.75rem]">
+                Esta hora se muestra en el email de recordatorio urgente. Para cambiar cuándo se envía el recordatorio, actualiza el cron job.
+              </p>
+            </div>
           </div>
 
           <div className="mb-5">
-            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Recordatorio urgente (día del deadline)</p>
+            <div className="flex items-center justify-between mb-3">
+              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Recordatorio urgente (día del deadline)</p>
+              <EditBtn type="URGENT_REMINDER" />
+            </div>
             <ToggleRow
               label="Activado"
               enabled={settings.secondReminderEnabled}
               onChange={(v) => save({ secondReminderEnabled: v }, "checkin-deadline")}
             />
-            <FieldRow label="Hora de envío">
-              <SelectField
-                value={settings.secondReminderHour}
-                onChange={(v) => save({ secondReminderHour: v }, "checkin-deadline")}
-                options={HOURS}
-                disabled={!settings.secondReminderEnabled}
-              />
-            </FieldRow>
+            <FixedScheduleNote label="martes 6:00 pm (hora Ciudad de México)" />
             <SendNowButton onClick={handleSendSecondReminder} loading={sendingSecondReminder} />
           </div>
 
           <div>
-            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Reporte de cumplimiento (miércoles para admins)</p>
+            <div className="flex items-center justify-between mb-3">
+              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Reporte de cumplimiento (miércoles para admins)</p>
+              <EditBtn type="COMPLIANCE_REPORT" />
+            </div>
             <ToggleRow
               label="Activado"
               enabled={settings.complianceReportEnabled}
               onChange={(v) => save({ complianceReportEnabled: v }, "checkin-deadline")}
             />
-            <FieldRow label="Hora de envío">
-              <SelectField
-                value={settings.complianceReportHour}
-                onChange={(v) => save({ complianceReportHour: v }, "checkin-deadline")}
-                options={HOURS}
-                disabled={!settings.complianceReportEnabled}
-              />
-            </FieldRow>
+            <FixedScheduleNote label="miércoles 9:00 am (hora Ciudad de México)" />
             <SendNowButton onClick={handleSendComplianceReport} loading={sendingComplianceReport} />
           </div>
         </SectionCard>
@@ -516,7 +529,10 @@ export function NotificationSettingsForm({ initial }: { initial: Settings }) {
         <SectionCard>
           <div className="flex items-center justify-between mb-1">
             <SectionTitle>Emails de bienvenida</SectionTitle>
-            <SavedIndicator show={!!savedKeys["welcome"]} />
+            <div className="flex items-center gap-3">
+              <SavedIndicator show={!!savedKeys["welcome"]} />
+              <EditBtn type="WELCOME" />
+            </div>
           </div>
           <p className="text-sm text-gray-500 mb-4">
             Envía un email de bienvenida cuando se invita a un nuevo usuario a la plataforma.
@@ -532,6 +548,14 @@ export function NotificationSettingsForm({ initial }: { initial: Settings }) {
       </div>
 
       <ToastList toasts={toasts} onRemove={removeToast} />
+
+      {editingType && (
+        <EditorModal
+          template={templateFor(editingType)}
+          onClose={() => setEditingType(null)}
+          onSaved={handleTemplateSaved}
+        />
+      )}
     </>
   )
 }
