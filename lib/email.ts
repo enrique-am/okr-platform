@@ -1,8 +1,32 @@
 import { Resend } from "resend"
+import { prisma } from "@/lib/prisma"
+import { EmailTemplateType } from "@prisma/client"
 
 const resend = new Resend(process.env.RESEND_API_KEY)
 const FROM = process.env.RESEND_FROM_EMAIL ?? "noreply@am.com.mx"
 const APP_URL = process.env.APP_URL ?? process.env.NEXTAUTH_URL ?? "http://localhost:3000"
+
+// ─── Custom template helpers ──────────────────────────────────────────────────
+
+async function getCustomTemplate(type: EmailTemplateType): Promise<{ subject: string; bodyHtml: string } | null> {
+  try {
+    const tmpl = await prisma.emailTemplate.findUnique({ where: { type } })
+    return tmpl?.isCustom ? { subject: tmpl.subject, bodyHtml: tmpl.bodyHtml } : null
+  } catch {
+    return null
+  }
+}
+
+function replaceMergeTags(
+  html: string,
+  vars: Partial<Record<"nombre" | "equipo" | "progreso" | "enlace", string>>
+): string {
+  return html
+    .replace(/\{\{nombre\}\}/g, vars.nombre ?? "")
+    .replace(/\{\{equipo\}\}/g, vars.equipo ?? "")
+    .replace(/\{\{progreso\}\}/g, vars.progreso ?? "")
+    .replace(/\{\{enlace\}\}/g, vars.enlace ?? "")
+}
 
 // ─── Shared HTML wrapper ──────────────────────────────────────────────────────
 
@@ -69,6 +93,19 @@ export async function sendWelcomeEmail(
     teamName: string
   }
 ) {
+  const custom = await getCustomTemplate(EmailTemplateType.WELCOME)
+  if (custom) {
+    await resend.emails.send({
+      from: FROM, to,
+      subject: replaceMergeTags(custom.subject, { equipo: teamName }),
+      html: emailWrapper(replaceMergeTags(custom.bodyHtml, {
+        equipo: teamName,
+        enlace: `${APP_URL}/login`,
+      })),
+    })
+    return
+  }
+
   const content = `
     <h1 style="margin:0 0 8px;font-size:20px;font-weight:700;color:#111827;">¡Bienvenido/a a ORC Platform!</h1>
     <p style="margin:0 0 16px;font-size:14px;color:#6b7280;line-height:1.7;">
@@ -155,8 +192,22 @@ export async function sendWeeklyCheckinReminder(
     customMessage?: string | null
   }
 ) {
+  const checkinUrl = `${APP_URL}/dashboard/teams/${teamSlug}/checkin`
+  const custom = await getCustomTemplate(EmailTemplateType.WEEKLY_REMINDER)
+  if (custom) {
+    await resend.emails.send({
+      from: FROM, to,
+      subject: replaceMergeTags(custom.subject, { equipo: teamName }),
+      html: emailWrapper(replaceMergeTags(custom.bodyHtml, {
+        nombre: name?.split(" ")[0] ?? "",
+        equipo: teamName,
+        enlace: checkinUrl,
+      })),
+    })
+    return
+  }
+
   const firstName = name?.split(" ")[0] ?? null
-  const checkinUrl = `${APP_URL}/dashboard/teams/${teamSlug}`
 
   const orcRows = orcs
     .map((orc) => {
@@ -279,6 +330,21 @@ export async function sendDeadlineReminder(
   const firstName = name?.split(" ")[0] ?? null
   const teamUrl = `${APP_URL}/dashboard/teams/${teamSlug}`
 
+  const custom = await getCustomTemplate(EmailTemplateType.DEADLINE_REMINDER)
+  if (custom) {
+    await resend.emails.send({
+      from: FROM, to,
+      subject: replaceMergeTags(custom.subject, { equipo: teamName }),
+      html: emailWrapper(replaceMergeTags(custom.bodyHtml, {
+        nombre: firstName ?? "",
+        equipo: teamName,
+        progreso: `${Math.round(progress)}%`,
+        enlace: teamUrl,
+      })),
+    })
+    return
+  }
+
   const pct = Math.min(100, Math.round(progress))
   const barColor = pct >= 70 ? "#72bf44" : pct >= 60 ? "#f59e0b" : "#ef4444"
   const textColor = pct >= 70 ? "#15803d" : pct >= 60 ? "#b45309" : "#b91c1c"
@@ -395,6 +461,19 @@ export async function sendWeeklyDigest(
 ) {
   const firstName = name?.split(" ")[0] ?? null
   const dashboardUrl = `${APP_URL}/dashboard/company`
+
+  const custom = await getCustomTemplate(EmailTemplateType.WEEKLY_DIGEST)
+  if (custom) {
+    await resend.emails.send({
+      from: FROM, to,
+      subject: custom.subject,
+      html: emailWrapper(replaceMergeTags(custom.bodyHtml, {
+        nombre: firstName ?? "",
+        enlace: dashboardUrl,
+      })),
+    })
+    return
+  }
 
   const teamRows = teams
     .map((team, idx) => {
@@ -540,6 +619,20 @@ export async function sendUrgentCheckinReminder(
   const checkinUrl = `${APP_URL}/dashboard/teams/${teamSlug}/checkin`
   const hourDisplay = deadlineHour > 12 ? `${deadlineHour - 12}pm` : `${deadlineHour}am`
 
+  const custom = await getCustomTemplate(EmailTemplateType.URGENT_REMINDER)
+  if (custom) {
+    await resend.emails.send({
+      from: FROM, to,
+      subject: replaceMergeTags(custom.subject, { equipo: teamName }),
+      html: emailWrapper(replaceMergeTags(custom.bodyHtml, {
+        nombre: firstName ?? "",
+        equipo: teamName,
+        enlace: checkinUrl,
+      })),
+    })
+    return
+  }
+
   const orcRows = orcs
     .map((orc) => {
       const pct = Math.min(100, Math.round(orc.progress))
@@ -633,6 +726,20 @@ export async function sendComplianceReport(
 ) {
   const firstName = name?.split(" ")[0] ?? null
   const adminUrl = `${APP_URL}/admin`
+
+  const custom = await getCustomTemplate(EmailTemplateType.COMPLIANCE_REPORT)
+  if (custom) {
+    await resend.emails.send({
+      from: FROM, to,
+      subject: custom.subject,
+      html: emailWrapper(replaceMergeTags(custom.bodyHtml, {
+        nombre: firstName ?? "",
+        progreso: `${complianceRate}%`,
+        enlace: adminUrl,
+      })),
+    })
+    return
+  }
 
   const compliant = teams.filter((t) => t.submittedOnTime)
   const nonCompliant = teams.filter((t) => !t.submittedOnTime)

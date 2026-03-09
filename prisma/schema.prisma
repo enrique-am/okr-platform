@@ -58,6 +58,15 @@ enum FeedbackPriority {
   LOW
 }
 
+enum EmailTemplateType {
+  WELCOME
+  WEEKLY_REMINDER
+  DEADLINE_REMINDER
+  URGENT_REMINDER
+  WEEKLY_DIGEST
+  COMPLIANCE_REPORT
+}
+
 // ─── Core Domain Models ───────────────────────────────────────────────────────
 
 model User {
@@ -81,6 +90,7 @@ model User {
   ledTeams         Team[]           @relation("TeamLead")
   notificationSettingsUpdates NotificationSettings[]
   helpSectionsUpdated         HelpSection[]          @relation("HelpSectionUpdatedBy")
+  emailTemplatesUpdated       EmailTemplate[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -314,6 +324,19 @@ model HelpDocument {
   order     Int
   createdAt DateTime    @default(now())
   updatedAt DateTime    @updatedAt
+}
+
+// ─── Email Templates ──────────────────────────────────────────────────────────
+
+model EmailTemplate {
+  id          String            @id @default(cuid())
+  type        EmailTemplateType @unique
+  subject     String
+  bodyHtml    String            @db.Text
+  isCustom    Boolean           @default(false)
+  updatedAt   DateTime          @updatedAt
+  updatedById String?
+  updatedBy   User?             @relation(fields: [updatedById], references: [id], onDelete: SetNull)
 }
 
 // ─── NextAuth Required Models ─────────────────────────────────────────────────

@@ -4,13 +4,17 @@ import { authOptions } from "@/lib/auth"
 import { AppLayout } from "@/components/layout/app-layout"
 import { AdminNav } from "@/components/admin/admin-nav"
 import { NotificationSettingsForm } from "./notification-settings-form"
-import { getNotificationSettings } from "./actions"
+import { EmailTemplatesSection } from "./email-templates-section"
+import { getNotificationSettings, getEmailTemplates } from "./actions"
 
 export default async function AdminNotificationsPage() {
   const session = await getServerSession(authOptions)
   if (session?.user?.role !== "ADMIN") redirect("/dashboard")
 
-  const settings = await getNotificationSettings()
+  const [settings, templates] = await Promise.all([
+    getNotificationSettings(),
+    getEmailTemplates(),
+  ])
 
   return (
     <AppLayout
@@ -23,27 +27,30 @@ export default async function AdminNotificationsPage() {
           Configura cuándo y cómo se envían los correos automáticos del sistema.
         </p>
       </div>
-      <NotificationSettingsForm
-        initial={{
-          weeklyReminderEnabled: settings.weeklyReminderEnabled,
-          weeklyReminderDay: settings.weeklyReminderDay,
-          weeklyReminderHour: settings.weeklyReminderHour,
-          deadlineReminderEnabled: settings.deadlineReminderEnabled,
-          deadlineReminderDays: settings.deadlineReminderDays,
-          weeklyDigestEnabled: settings.weeklyDigestEnabled,
-          weeklyDigestDay: settings.weeklyDigestDay,
-          weeklyDigestHour: settings.weeklyDigestHour,
-          welcomeEmailEnabled: settings.welcomeEmailEnabled,
-          secondReminderEnabled: settings.secondReminderEnabled,
-          secondReminderHour: settings.secondReminderHour,
-          deadlineDay: settings.deadlineDay,
-          deadlineHour: settings.deadlineHour,
-          complianceReportEnabled: settings.complianceReportEnabled,
-          complianceReportHour: settings.complianceReportHour,
-          customReminderMessage: settings.customReminderMessage,
-          customDigestMessage: settings.customDigestMessage,
-        }}
-      />
+      <div className="space-y-8">
+        <NotificationSettingsForm
+          initial={{
+            weeklyReminderEnabled: settings.weeklyReminderEnabled,
+            weeklyReminderDay: settings.weeklyReminderDay,
+            weeklyReminderHour: settings.weeklyReminderHour,
+            deadlineReminderEnabled: settings.deadlineReminderEnabled,
+            deadlineReminderDays: settings.deadlineReminderDays,
+            weeklyDigestEnabled: settings.weeklyDigestEnabled,
+            weeklyDigestDay: settings.weeklyDigestDay,
+            weeklyDigestHour: settings.weeklyDigestHour,
+            welcomeEmailEnabled: settings.welcomeEmailEnabled,
+            secondReminderEnabled: settings.secondReminderEnabled,
+            secondReminderHour: settings.secondReminderHour,
+            deadlineDay: settings.deadlineDay,
+            deadlineHour: settings.deadlineHour,
+            complianceReportEnabled: settings.complianceReportEnabled,
+            complianceReportHour: settings.complianceReportHour,
+            customReminderMessage: settings.customReminderMessage,
+            customDigestMessage: settings.customDigestMessage,
+          }}
+        />
+        <EmailTemplatesSection initialTemplates={templates} />
+      </div>
     </AppLayout>
   )
 }
