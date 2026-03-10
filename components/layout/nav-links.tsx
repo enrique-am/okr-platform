@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { LayoutDashboard, Building2, HelpCircle, Settings, Menu, X, Users, ChevronDown } from "lucide-react"
+import { LayoutDashboard, Building2, HelpCircle, Settings, Menu, X, Users, ChevronDown, BarChart2 } from "lucide-react"
 import { SignOutButton } from "@/components/auth/sign-out-button"
 
 const ROLE_LABELS: Record<string, string> = {
@@ -61,6 +61,7 @@ export function NavLinks({ role, unreadFeedback, userName, teams }: NavLinksProp
   const isCompany  = pathname.startsWith("/dashboard/company")
   const isAyuda    = pathname.startsWith("/ayuda")
   const isAdmin    = pathname.startsWith("/admin")
+  const isReports  = pathname.startsWith("/reports")
 
   // ── Desktop link style ───────────────────────────────────────────────────────
   const base = "px-3 py-1.5 text-sm font-medium rounded-lg transition-colors flex items-center gap-1.5"
@@ -120,6 +121,12 @@ export function NavLinks({ role, unreadFeedback, userName, teams }: NavLinksProp
           </div>
         )}
 
+        {(role === "ADMIN" || role === "EXECUTIVE" || role === "LEAD") && (
+          <Link href="/reports" className={cls(isReports)}>
+            <BarChart2 size={15} />
+            Reportes
+          </Link>
+        )}
         <Link href="/ayuda" className={cls(isAyuda)}>
           <HelpCircle size={15} />
           Ayuda
@@ -194,6 +201,12 @@ export function NavLinks({ role, unreadFeedback, userName, teams }: NavLinksProp
                 </div>
               )}
 
+              {(role === "ADMIN" || role === "EXECUTIVE" || role === "LEAD") && (
+                <Link href="/reports" onClick={() => setOpen(false)} className={mcls(isReports)}>
+                  <BarChart2 size={16} />
+                  Reportes
+                </Link>
+              )}
               <Link href="/ayuda" onClick={() => setOpen(false)} className={mcls(isAyuda)}>
                 <HelpCircle size={16} />
                 Ayuda

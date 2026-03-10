@@ -15,5 +15,5 @@ export const config = {
    *   /_next/*        — Next.js internals
    *   /favicon.ico    — static asset
    */
-  matcher: ["/dashboard/:path*", "/admin/:path*"],
+  matcher: ["/dashboard/:path*", "/admin/:path*", "/reports/:path*"],
 }
