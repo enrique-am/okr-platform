@@ -55,23 +55,27 @@ export const authOptions: NextAuthOptions = {
       return true
     },
     async jwt({ token, user }) {
-      // `user` is only present on the initial sign-in
+      // `user` is only present on the initial sign-in.
       if (user) {
-        token.id = user.id
-        token.role = (user as { role: Role }).role
-        // Fetch team memberships and onboarding flag at sign-in
-        const [userTeams, dbUser] = await Promise.all([
-          prisma.userTeam.findMany({
-            where: { userId: user.id },
-            select: { teamId: true },
-          }),
-          prisma.user.findUnique({
-            where: { id: user.id },
-            select: { hasCompletedOnboarding: true },
-          }),
-        ])
-        token.teamIds = userTeams.map((ut) => ut.teamId)
-        token.hasCompletedOnboarding = dbUser?.hasCompletedOnboarding ?? false
+        // With @auth/prisma-adapter v2.x + NextAuth v4, user.id can be the OAuth
+        // provider's subject (Google's numeric sub) rather than the DB CUID.
+        // Look up by email instead — it is always the canonical identifier from
+        // the signIn callback and is reliably present on every provider.
+        const dbUser = await prisma.user.findUnique({
+          where: { email: user.email! },
+          select: {
+            id: true,
+            role: true,
+            hasCompletedOnboarding: true,
+            userTeams: { select: { teamId: true } },
+          },
+        })
+        if (dbUser) {
+          token.id = dbUser.id
+          token.role = dbUser.role
+          token.teamIds = dbUser.userTeams.map((ut) => ut.teamId)
+          token.hasCompletedOnboarding = dbUser.hasCompletedOnboarding
+        }
       }
       // `impersonatedBy` is injected directly into the token by the impersonate
       // server action — just preserve it on every subsequent call
